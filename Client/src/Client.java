@@ -16,19 +16,22 @@ public class Client {
     System.out.print("\nPlease, type your username: ");
     Scanner input = new Scanner(System.in);
     Client user = new Client(input.nextLine());
+
     try {
       AuctionSystem server = user.connectToServer("LZSCC.311 auction server");
-      System.out.println("\n\nWelcome to the Auction System LZSCC.311, "
+      System.out.println("\nWelcome to the Auction System LZSCC.311, "
         + user.userName);
       
       // Client Loop
       Integer operation = 0;
       while(true) {
-        System.out.println("\n\nSelect an operation:\n"
+        System.out.println("\n--- Available Operations ---"
           + "\n1. Get item details"
           + "\n2. Nothing"
           + "\n0. Exit"
+          + "\n"
         );
+        System.out.print("Select an operation (type the number): ");
         operation = user.getOperation(input.nextLine());
         boolean exit = user.execOperation(operation, server, input);
         if (exit) break;
@@ -51,7 +54,7 @@ public class Client {
     try {
       Registry registry = LocateRegistry.getRegistry("localhost");
       AuctionSystem server = (AuctionSystem) registry.lookup(name);
-      System.out.println("Connected to server " + name);
+      System.out.println("Connected to server \"" + name + "\"");
       return server;
     } catch (Exception e) {
       System.err.println("Exception:");
@@ -65,8 +68,6 @@ public class Client {
       Integer opInteger = Integer.parseInt(operation);
       return opInteger;
     } catch (Exception e) {
-      System.out.println("Unrecognized operation with identifier \""
-        + operation + "\". Try again.");
       return -1;
     }
   }
@@ -77,15 +78,17 @@ public class Client {
         input.close();
         break;
       case 1:
-        System.out.println("Which item would you like to consult? Please, type in an item ID: ");
+        System.out.print("Which item would you like to consult? Please, type in an item ID: ");
         Integer itemId = getNumberedItemId(input);
         this.getItemSpec(server, itemId);
         return false;
       case 2:
         return false;
       default:
+        System.out.println("\nERROR: Unrecognized operation, try again.");
         return false;
     }
+
     System.out.println("You chose to exit the auction system. Goodbye "
       + getUserName() + "!");
     return true;
@@ -97,7 +100,7 @@ public class Client {
         Integer id = Integer.parseInt(input.nextLine());
         return id;
       } catch (Exception e) {
-        System.out.println("Not a valid item ID. Try again");
+        System.out.println("Not a valid item ID. Try again:\n");
         continue;
       }
     }
@@ -107,14 +110,19 @@ public class Client {
     try {
       AuctionItem item = server.getSpec((int) itemId, getUserName());
       if (item != null) {
-        System.out.println("\n--- Item " + itemId + " details ---"
+        String introString = "\n--- Item " + itemId + " details ---";
+        System.out.println(
+          introString
           + "\nName: " + item.getItemTitle()
           + "\nDescription: " + item.getItemDescription()
           + "\nCondition: " + item.getItemCondition()
-          + "---------------------------------\n"
+          + "\n" + "-".repeat(introString.length()) + "\n"
         );
+      } else {
+        System.out.println("\nERROR: Item with ID: " + itemId + " could not be found.\n");
       }
       return item;
+
     } catch (Exception e) {
       e.printStackTrace();
       return null;
