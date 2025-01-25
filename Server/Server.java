@@ -9,18 +9,23 @@ public class Server implements AuctionSystem {
 
   public Server() {
     super();
-    itemList = new HashMap<Integer, AuctionItem>();
-    AuctionItem hat = new AuctionItem(1, "Juozas Hat", "Hat that belonged to Juozas");
-    AuctionItem gloves = new AuctionItem(2, "Gloves", "Pair of Gloves");
-    itemList.put(hat.getItemId(), hat);
-    itemList.put(gloves.getItemId(), gloves);
+    this.itemList = new HashMap<Integer, AuctionItem>();
+    addItem(new AuctionItem(1, "Leather Hat", "Hat that belonged to Juozas", 3));
+    addItem(new AuctionItem(2, "Gloves", "Pair of Gloves", 2));
+    addItem(new AuctionItem(3, "Oakley Windbreaker", "Windbreaker from 2006.", 5));
+  }
+  
+  private void addItem(AuctionItem item) {
+    this.itemList.put(item.getItemId(), item);
   }
 
   // From AuctionSystem
-  public AuctionItem getSpec(int itemId, int clientId) throws RemoteException {
+  public AuctionItem getSpec(int itemId, String clientId) throws RemoteException {
+    System.out.println("Client " + clientId + " requested item " + itemId);
+
     if (this.itemList.containsKey(itemId)) {
+      System.out.println("Succesfully retreived item with ID: " + itemId);
       AuctionItem selectedItem = this.itemList.get(itemId);
-      System.out.println("Client " + clientId + " requested item " + itemId);
       return selectedItem;
     }
 
@@ -32,7 +37,7 @@ public class Server implements AuctionSystem {
 
     try {
       Server s = new Server();
-      String name = "myserver";
+      String name = "LZSCC.311 auction server";
       AuctionSystem stub = (AuctionSystem) UnicastRemoteObject.exportObject(s, 0);
       Registry registry = LocateRegistry.getRegistry();
       registry.rebind(name, stub);
