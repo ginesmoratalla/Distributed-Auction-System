@@ -25,9 +25,9 @@ public class Client {
       Integer operation = 0;
       while(true) {
         System.out.println("\n\nSelect an operation:\n"
-          + "1. Get item details"
-          + "2. Nothing"
-          + "0. Exit"
+          + "\n1. Get item details"
+          + "\n2. Nothing"
+          + "\n0. Exit"
         );
         operation = user.getOperation(input.nextLine());
         boolean exit = user.execOperation(operation, server, input);
@@ -73,8 +73,6 @@ public class Client {
 
   public boolean execOperation(Integer op, AuctionSystem server, Scanner input) throws RemoteException {
     switch (op) {
-      case -1:
-        return false;
       case 0:
         input.close();
         break;
@@ -82,6 +80,10 @@ public class Client {
         System.out.println("Which item would you like to consult? Please, type in an item ID: ");
         Integer itemId = getNumberedItemId(input);
         this.getItemSpec(server, itemId);
+        return false;
+      case 2:
+        return false;
+      default:
         return false;
     }
     System.out.println("You chose to exit the auction system. Goodbye "
