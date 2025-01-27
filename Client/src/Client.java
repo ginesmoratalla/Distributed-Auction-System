@@ -1,14 +1,19 @@
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
-
 
 public class Client {
 
   private String userName;
+  private ArrayList<Integer> userAuctions;
+
   public Client(String userName) {
     this.userName = userName;
+    this.userAuctions = new ArrayList<Integer>();
   }
 
   public static void main(String[] args) {
@@ -17,33 +22,42 @@ public class Client {
     Scanner input = new Scanner(System.in);
     Client user = new Client(input.nextLine());
 
-    try {
-      AuctionSystem server = user.connectToServer("LZSCC.311 auction server");
-      System.out.println("\nWelcome to the Auction System LZSCC.311, "
-        + user.userName);
-      
-      // Client Loop
-      Integer operation = 0;
-      while(true) {
-        System.out.println("\n--- Available Operations ---"
-          + "\n1. Get item details"
-          + "\n2. Nothing"
-          + "\n0. Exit"
-          + "\n"
-        );
-        System.out.print("Select an operation (type the number): ");
-        operation = user.getOperation(input.nextLine());
-        boolean exit = user.execOperation(operation, server, input);
-        if (exit) break;
-      }
+    // Outer loop in case server connection fails
+    while (true) {
+      try {
 
-    } catch (Exception e) {
-      e.printStackTrace();
+        AuctionSystem server = user.connectToServer("LZSCC.311 auction server");
+        System.out.println("\nWelcome to the Auction System LZSCC.311, " +
+            user.userName);
+
+        // Client Loop
+        Integer operation = 0;
+        while (true) {
+          System.out.println("\n--- Available Operations ---"
+              + "\n1. Get item details"
+              + "\n2. Create auction for an item"
+              + "\n3. Bid on an existing auction"
+              + "\n4. Close your auction"
+              + "\n0. Exit"
+              + "\n");
+
+          System.out.print("Select an operation (type the number): ");
+          operation = user.getOperation(input.nextLine());
+          boolean exit = user.execOperation(operation, server, input);
+          if (exit)
+            break;
+        }
+
+      } catch (Exception e) {
+        e.printStackTrace();
+        System.out.println(
+            "\nCould not connect to the server. Trying again...\n");
+      }
     }
   }
 
   public String getUserName() {
-	  return this.userName;
+    return this.userName;
   }
 
   public void setUserName(String userName) {
@@ -72,13 +86,17 @@ public class Client {
     }
   }
 
-  public boolean execOperation(Integer op, AuctionSystem server, Scanner input) throws RemoteException {
+  public boolean execOperation(Integer op, AuctionSystem server, Scanner input)
+      throws RemoteException {
     switch (op) {
       case 0:
         input.close();
-        break;
+        System.out.println("You chose to exit the auction system. Goodbye " +
+            getUserName() + "!");
+        System.exit(0);
       case 1:
-        System.out.print("Which item would you like to consult? Please, type in an item ID: ");
+        System.out.print(
+            "Which item would you like to consult? Please, type in an item ID: ");
         Integer itemId = getNumberedItemId(input);
         this.getItemSpec(server, itemId);
         return false;
@@ -88,14 +106,10 @@ public class Client {
         System.out.println("\nERROR: Unrecognized operation, try again.");
         return false;
     }
-
-    System.out.println("You chose to exit the auction system. Goodbye "
-      + getUserName() + "!");
-    return true;
   }
 
   public Integer getNumberedItemId(Scanner input) {
-    while(true) {
+    while (true) {
       try {
         Integer id = Integer.parseInt(input.nextLine());
         return id;
@@ -106,26 +120,100 @@ public class Client {
     }
   }
 
-  public AuctionItem getItemSpec(AuctionSystem server, Integer itemId) throws RemoteException {
+  public AuctionItem getItemSpec(AuctionSystem server, Integer itemId)
+      throws RemoteException {
     try {
       AuctionItem item = server.getSpec((int) itemId, getUserName());
       if (item != null) {
         String introString = "\n--- Item " + itemId + " details ---";
-        System.out.println(
-          introString
-          + "\nName: " + item.getItemTitle()
-          + "\nDescription: " + item.getItemDescription()
-          + "\nCondition: " + item.getItemCondition()
-          + "\n" + "-".repeat(introString.length()) + "\n"
-        );
+        System.out.println(introString + "\nName: " + item.getItemTitle() +
+            "\nDescription: " + item.getItemDescription() +
+            "\nCondition: " + item.getItemCondition() + "\n"
+            + "-".repeat(introString.length()) + "\n");
       } else {
-        System.out.println("\nERROR: Item with ID: " + itemId + " could not be found.\n");
+        System.out.println("\nERROR: Item with ID: " + itemId +
+            " could not be found.\n");
       }
       return item;
 
     } catch (Exception e) {
       e.printStackTrace();
       return null;
+    }
+  }
+
+  public void createAuction(Server server, Scanner input) {
+
+    System.out.println("\nCreating new auction...");
+
+    System.out.print("\nWhat is the name of your item? ");
+    String name = input.nextLine();
+
+    System.out.println("\nGive an item description");
+    String description = input.nextLine();
+
+    System.out.println(
+            "\nIs your item new or used?"
+            + "\nRate its usage in a scale from 1 (new) to 5 (heavily used)."
+            + "\nAnything outside of this scale will default to \"Used\":");
+    Integer condition = 0;
+    while (true) {
+      try {
+        condition = Integer.parseInt(input.nextLine());
+        break;
+      } catch (Exception e) {
+        System.out.println("Not a valid input type, please try again.");
+      }
+    }
+    System.out.println("\nWhat is the minimum price you are willing to sell the item for? (eur)."
+                      + "\nMake sure cent decimals (if any) are separated by a dot.");
+    Float reservePrice = 0.0f;
+    while (true) {
+      try {
+        reservePrice = Float.parseFloat(input.nextLine());
+        break;
+      } catch (Exception e) {
+        System.out.println("Not a valid input type, please try again.");
+      }
+    }
+    System.out.println("\nSelect a starting price."
+                      + "\nMake sure cent decimals (if any) are separated by a dot.");
+    Float startingPrice = 0.0f;
+    while (true) {
+      try {
+        startingPrice = Float.parseFloat(input.nextLine());
+        break;
+      } catch (Exception e) {
+        System.out.println("Not a valid input type, please try again.");
+      }
+    }
+    AuctionItem item = new AuctionItem(1, name, description, condition);
+  }
+
+  /*
+   * Closes an auction created by this user (personal auctions)
+   */
+  public void closeAuction(Server server, Scanner input) {
+    listPersonalAuctions();
+    if (this.userAuctions.isEmpty())
+      return;
+
+    System.out.println("Select aunction to close (type id): ");
+    input.nextLine();
+  }
+
+  /*
+   * Lists current user's personally auctioned items
+   */
+  public void listPersonalAuctions() {
+    if (this.userAuctions.isEmpty()) {
+      System.out.println("You have no auctioned items");
+      return;
+    }
+    System.out.println("\"" + this.getUserName() + " \"auctioned items:");
+    for (Map.Entry<Integer, AuctionListing> item : this.userAuctions.entrySet()) {
+      System.out.println("ID: " + item.getKey() + ", item: " +
+          item.getValue().getItem().getItemTitle());
     }
   }
 }
