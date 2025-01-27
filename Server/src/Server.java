@@ -43,11 +43,11 @@ public class Server implements AuctionSystem {
    *
    * Removes listing to server's global list
    */
-  public Float closeAuction(Integer listingId) throws RemoteException {
+  public Float closeAuction(String userName, Integer listingId) throws RemoteException {
     if (this.auctionList.containsKey(listingId)) {
       AuctionListing listing = this.auctionList.get(listingId);
       if (listing.getCurrentPrice().compareTo(listing.getReservePrice()) <= 0) {
-        return null;
+        return 0.0f;
       } else {
         return listing.getCurrentPrice();
       }
@@ -60,11 +60,12 @@ public class Server implements AuctionSystem {
    *
    * Create an auction for a given item's details.
    */
-  public Integer openAuction(String itName, String itDesc, Integer itCond,
+  public Integer openAuction(String userName, String itName, String itDesc, Integer itCond,
       Float resPrice, Float startPrice) throws RemoteException {
 
-    AuctionItem item = (new AuctionItem(globalId, itName, itDesc, itCond));
+    AuctionItem item = addItem(new AuctionItem(globalId, itName, itDesc, itCond));
     AuctionListing listing = addListing(item.getItemId(), new AuctionListing(item.getItemId(), item, startPrice, resPrice));
+    System.out.println("User \"" + userName + "\" created auction for \"" + itName + "\", id: " + item.getItemId());
     return listing.getAuctionId();
   }
 

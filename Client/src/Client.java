@@ -2,18 +2,16 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Scanner;
 
 public class Client {
 
   private String userName;
-  private ArrayList<Integer> userAuctions;
+  private ArrayList<AuctionItem> userAuctions;
 
   public Client(String userName) {
     this.userName = userName;
-    this.userAuctions = new ArrayList<Integer>();
+    this.userAuctions = new ArrayList<AuctionItem>();
   }
 
   public static void main(String[] args) {
@@ -101,6 +99,7 @@ public class Client {
         this.getItemSpec(server, itemId);
         return false;
       case 2:
+        createAuction(server, input);
         return false;
       default:
         System.out.println("\nERROR: Unrecognized operation, try again.");
@@ -142,7 +141,7 @@ public class Client {
     }
   }
 
-  public void createAuction(Server server, Scanner input) {
+  public void createAuction(AuctionSystem server, Scanner input) {
 
     System.out.println("\nCreating new auction...");
 
@@ -187,13 +186,19 @@ public class Client {
         System.out.println("Not a valid input type, please try again.");
       }
     }
-    AuctionItem item = new AuctionItem(1, name, description, condition);
+    try {
+      Integer id = server.openAuction(this.userName, name, description, condition, reservePrice, startingPrice);
+      System.out.println("Created auction for \"" + name + "\".\nCorresponding ID: " + id);
+    } catch(Exception e) {
+      System.out.println("\nERROR: unable to create listing\n");
+      e.printStackTrace();
+    }
   }
 
   /*
    * Closes an auction created by this user (personal auctions)
    */
-  public void closeAuction(Server server, Scanner input) {
+  public void closeAuction(AuctionSystem server, Scanner input) {
     listPersonalAuctions();
     if (this.userAuctions.isEmpty())
       return;
@@ -211,9 +216,9 @@ public class Client {
       return;
     }
     System.out.println("\"" + this.getUserName() + " \"auctioned items:");
-    for (Map.Entry<Integer, AuctionListing> item : this.userAuctions.entrySet()) {
-      System.out.println("ID: " + item.getKey() + ", item: " +
-          item.getValue().getItem().getItemTitle());
+    for (AuctionItem item : this.userAuctions) {
+      System.out.println("ID: " + item.getItemId() + ", item: " +
+          item.getItemTitle());
     }
   }
 }
