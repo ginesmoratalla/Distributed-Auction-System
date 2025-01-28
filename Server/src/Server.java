@@ -1,18 +1,24 @@
 import java.rmi.RemoteException;
+import java.util.Random;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Server implements AuctionSystem {
   private HashMap<Integer, AuctionItem> itemList;
   private HashMap<Integer, AuctionListing> auctionList;
+  private ArrayList<Integer> userList;
   private static Integer globalId = 0;
+  private Random random;
 
   public Server() {
     super();
     this.itemList = new HashMap<Integer, AuctionItem>();
     this.auctionList = new HashMap<Integer, AuctionListing>();
+    this.userList = new ArrayList<Integer>();
+    this.random = new Random();
 
     addItem(new AuctionItem(globalId, "Leather Hat", "Hat that belonged to Juozas", 3));
     addItem(new AuctionItem(globalId, "Gloves", "Pair of Gloves", 2));
@@ -31,6 +37,20 @@ public class Server implements AuctionSystem {
   }
 
   /*
+   * Creates and adds user ID to server's user list
+   *
+   * User ID is created ensuring mutex.
+   */
+  public synchronized Integer addUser() {
+    Integer userId = random.nextInt(100);
+    while(this.userList.contains(userId)) {
+      userId = random.nextInt();
+    }
+    this.userList.add(userId);
+    return userId;
+  }
+
+  /*
    * Adds listing to server's global list
    */
   private AuctionListing addListing(Integer id, AuctionListing listing) {
@@ -43,14 +63,9 @@ public class Server implements AuctionSystem {
    *
    * Removes listing to server's global list
    */
-  public Float closeAuction(String userName, Integer listingId) throws RemoteException {
+  public AuctionListing closeAuction(Integer userId, Integer listingId) throws RemoteException {
     if (this.auctionList.containsKey(listingId)) {
-      AuctionListing listing = this.auctionList.get(listingId);
-      if (listing.getCurrentPrice().compareTo(listing.getReservePrice()) <= 0) {
-        return 0.0f;
-      } else {
-        return listing.getCurrentPrice();
-      }
+      return this.auctionList.get(listingId);
     }
     return null;
   }

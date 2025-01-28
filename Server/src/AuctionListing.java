@@ -7,14 +7,25 @@ public class AuctionListing implements Serializable {
   private Float startingPrice;
   private Float reservePrice;
   private Float currentPrice;
+  private String bestBidUser;
 
   public AuctionListing(Integer auctionId, AuctionItem item,
       Float startingPrice, Float reservePrice) {
+
     this.item = item;
     this.auctionId = auctionId;
     this.reservePrice = reservePrice;
     this.startingPrice = startingPrice;
     this.currentPrice = startingPrice;
+    this.bestBidUser = "None";
+  }
+
+  public String getBestBidUser() {
+    return bestBidUser;
+  }
+
+  public void setBestBidUser(String bestBidUser) {
+    this.bestBidUser = bestBidUser;
   }
 
   public Float getCurrentPrice() {

@@ -9,5 +9,6 @@ public interface AuctionSystem extends Remote {
       Float resPrice, Float startPrice)
       throws RemoteException;
 
-  public Float closeAuction(String userName, Integer listingId) throws RemoteException;
+  public AuctionListing closeAuction(Integer userId, Integer listingId) throws RemoteException;
+  public Integer addUser();
 }
