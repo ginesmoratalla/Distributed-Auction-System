@@ -1,7 +1,6 @@
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -20,16 +19,13 @@ public class Client {
 
   public static void main(String[] args) {
 
-    System.out.print("\nPlease, type your username: ");
-    Scanner input = new Scanner(System.in);
-
     // Outer loop in case server connection fails
     while (true) {
       try {
-        AuctionSystem server = connectToServer("LZSCC.311 auction server");
+        IAuctionSystem server = connectToServer("LZSCC.311 auction server");
+        System.out.print("\nPlease, type your username: ");
+        Scanner input = new Scanner(System.in);
         Client user = new Client(input.nextLine(), server.addUser());
-        System.out.println("\nWelcome to the Auction System LZSCC.311, " +
-            user.userName);
 
         // Client Loop
         Integer operation = 0;
@@ -56,11 +52,11 @@ public class Client {
     }
   }
 
-  public static AuctionSystem connectToServer(String name)
+  public static IAuctionSystem connectToServer(String name)
       throws RemoteException {
     try {
       Registry registry = LocateRegistry.getRegistry("localhost");
-      AuctionSystem server = (AuctionSystem) registry.lookup(name);
+      IAuctionSystem server = (IAuctionSystem) registry.lookup(name);
       System.out.println("Connected to server \"" + name + "\"");
       return server;
     } catch (Exception e) {
@@ -83,7 +79,7 @@ public class Client {
    * Executes the function logic corresponding to the user's selected
    * operaiton.
    */
-  public boolean execOperation(Integer op, AuctionSystem server, Scanner input)
+  public boolean execOperation(Integer op, IAuctionSystem server, Scanner input)
       throws RemoteException {
     switch (op) {
       case 0:
@@ -101,6 +97,10 @@ public class Client {
 
       case 2:
         createAuction(server, input);
+        return false;
+
+      case 4:
+        closeAuction(server, input);
         return false;
 
       default:
@@ -127,7 +127,7 @@ public class Client {
   /*
    * Returns item details from server 
    */
-  public AuctionItem getItemSpec(AuctionSystem server, Integer itemId)
+  public AuctionItem getItemSpec(IAuctionSystem server, Integer itemId)
       throws RemoteException {
     try {
       AuctionItem item = server.getSpec((int) itemId, this.userName);
@@ -149,17 +149,15 @@ public class Client {
     }
   }
 
-  public void createAuction(AuctionSystem server, Scanner input) {
+  public void createAuction(IAuctionSystem server, Scanner input) {
 
     System.out.println("\nCreating new auction...");
-
     System.out.print("\nWhat is the name of your item? ");
     String name = input.nextLine();
-
-    System.out.println("\nGive an item description");
+    System.out.print("\nGive an item description: ");
     String description = input.nextLine();
 
-    System.out.println(
+    System.out.print(
         "\nIs your item new or used?"
             + "\nRate its usage in a scale:\n"
             + "1 (new)\n" 
@@ -167,45 +165,47 @@ public class Client {
             + "3 (used)\n"
             + "4 (moderately used)\n"
             + "5 (heavily used)\n"
-            + "PSA: Anything outside of this scale will default to \"Used\":");
+            + "PSA: Anything outside of this scale will default to \"Used\": ");
     Integer condition = 0;
     while (true) {
       try {
         condition = Integer.parseInt(input.nextLine());
         break;
       } catch (Exception e) {
-        System.out.println("Not a valid input type, please try again.");
+        System.out.print("ERROR: Not a valid input type, please try again: ");
       }
     }
-    System.out.println(
-        "\nWhat is the minimum price you are willing to sell the item for? " +
-            "(EUR)."
-            + "\nMake sure cent decimals (if any) are separated by a dot.");
+
+    System.out.print(
+        "\nWhat is the minimum price you are willing to sell the item for? "
+        + "(EUR)."
+        + "\nMake sure cent decimals (if any) are separated by a dot: ");
     Float reservePrice = 0.0f;
     while (true) {
       try {
         reservePrice = Float.parseFloat(input.nextLine());
         break;
       } catch (Exception e) {
-        System.out.println("Not a valid input type, please try again.");
+        System.out.print("ERROR: Not a valid input type, please try again: ");
       }
     }
-    System.out.println(
+    System.out.print(
         "\nSelect a starting price (EUR)."
-            + "\nMake sure cent decimals (if any) are separated by a dot.");
+            + "\nMake sure cent decimals (if any) are separated by a dot: ");
     Float startingPrice = 0.0f;
     while (true) {
       try {
         startingPrice = Float.parseFloat(input.nextLine());
         break;
       } catch (Exception e) {
-        System.out.println("Not a valid input type, please try again.");
+        System.out.print("ERROR: Not a valid input type, please try again: ");
       }
     }
     try {
       Integer id = server.openAuction(this.userName, name, description,
           condition, reservePrice, startingPrice);
-      System.out.println("Created auction for \""
+      this.userAuctions.put(id, name);
+      System.out.println("\n[AUCTION SUCCESS] Created auction for \""
                           + name 
                           + "\".\nCorresponding ID: " + id
       );
@@ -220,8 +220,7 @@ public class Client {
    * Closes an auction created, if any.
    *  (user's personal auctions)
    */
-  public void closeAuction(AuctionSystem server, Scanner input) {
-     
+  public void closeAuction(IAuctionSystem server, Scanner input) {
     listPersonalAuctions();
     if (this.userAuctions.isEmpty()) return;
 
@@ -231,24 +230,25 @@ public class Client {
       try {
         Integer idToClose = Integer.parseInt(input.nextLine());
         if(!this.userAuctions.containsKey(idToClose)) {
-          System.out.println("ID not amongst your auctioned items, please try again...\n");
+          System.out.print("\nID not amongst your auctioned items, please try again: ");
           continue;
         }
         // Try remote method
         try {
           AuctionListing sold = server.closeAuction(this.userId, idToClose);
           if(sold.getCurrentPrice() == null) {
-            System.out.println("Something went wrong...\n");
+            System.out.println("[ERROR] Something went wrong...\n");
 
           } else if (sold.getCurrentPrice() < sold.getReservePrice()) {
-            System.out.println("Item was not sold (did not reach reserve price). Bid closed\n");
+            System.out.println("[AUCTION INFO] Item was not sold (did not reach reserve price). Bid closed\n");
 
           } else {
-            System.out.println("Item was succesfully sold for "
+            System.out.println("[AUCTION INFO] Item was succesfully sold for "
               + sold.getCurrentPrice() + " EUR."
               + "\nBuyer: " + sold.getBestBidUser() 
               + "\nBid closed.\n");
           }
+          this.userAuctions.remove(idToClose);
           return;
         } catch (RemoteException e) {
           System.out.println("ERROR: Retreiving auction listing form server. Try again.\n");
@@ -256,7 +256,7 @@ public class Client {
         }
 
       } catch (Exception e) {
-        System.out.println("Not a valid ID format, please try again.\n");
+        System.out.print("Not a valid ID format, please try again: ");
         continue;
       }
     }
@@ -271,14 +271,13 @@ public class Client {
       System.out.println("You have no auctioned items, going back...");
       return;
     }
-    System.out.println("\"" + this.userName + "\" auctioned items:");
+    System.out.println("\n---" + this.userName + " auctioned items ---");
     for (Map.Entry<Integer, String> entry: this.userAuctions.entrySet()) {
       System.out.println("ID: "
                           + entry.getKey()
-                          + ", item: "
+                          + " | item: "
                           + entry.getValue()
       );
     }
-    System.out.println("\n");
   }
 }

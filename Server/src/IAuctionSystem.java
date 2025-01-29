@@ -1,7 +1,7 @@
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-public interface AuctionSystem extends Remote {
+public interface IAuctionSystem extends Remote {
   public AuctionItem getSpec(int itemId, String clientId)
       throws RemoteException;
 
@@ -10,5 +10,5 @@ public interface AuctionSystem extends Remote {
       throws RemoteException;
 
   public AuctionListing closeAuction(Integer userId, Integer listingId) throws RemoteException;
-  public Integer addUser();
+  public Integer addUser() throws RemoteException;
 }

@@ -6,7 +6,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class Server implements AuctionSystem {
+public class Server implements IAuctionSystem {
   private HashMap<Integer, AuctionItem> itemList;
   private HashMap<Integer, AuctionListing> auctionList;
   private ArrayList<Integer> userList;
@@ -41,7 +41,7 @@ public class Server implements AuctionSystem {
    *
    * User ID is created ensuring mutex.
    */
-  public synchronized Integer addUser() {
+  public synchronized Integer addUser() throws RemoteException {
     Integer userId = random.nextInt(100);
     while(this.userList.contains(userId)) {
       userId = random.nextInt();
@@ -61,11 +61,13 @@ public class Server implements AuctionSystem {
   /*
    * Method for RMI
    *
-   * Removes listing to server's global list
+   * Removes listing from server's global list
    */
   public AuctionListing closeAuction(Integer userId, Integer listingId) throws RemoteException {
     if (this.auctionList.containsKey(listingId)) {
-      return this.auctionList.get(listingId);
+      AuctionListing returnListing = this.auctionList.get(listingId);
+      this.auctionList.remove(listingId);
+      return returnListing;
     }
     return null;
   }
@@ -109,7 +111,7 @@ public class Server implements AuctionSystem {
     try {
       Server s = new Server();
       String name = "LZSCC.311 auction server";
-      AuctionSystem stub = (AuctionSystem) UnicastRemoteObject.exportObject(s, 0);
+      IAuctionSystem stub = (IAuctionSystem) UnicastRemoteObject.exportObject(s, 0);
       Registry registry = LocateRegistry.getRegistry();
       registry.rebind(name, stub);
 
