@@ -229,6 +229,34 @@ public class Client {
     } catch (Exception e) {
       System.out.println("ERROR: unable to retreive item list from server. Going back...\n");
     }
+
+    System.out.print("Please, type the item ID from the corresponding item you want to place a bid on: ");
+    Integer idToBid = null;
+    while(true) {
+      try {
+        idToBid = Integer.parseInt(input.nextLine());
+        if (!server.idMatchesExistingItem(idToBid)) {
+          System.out.print("Item corresponding to " + idToBid + " does not exist, try another ID: ");
+          continue;
+        }
+        break;
+      } catch (Exception e) {
+        System.out.print("ERROR: Not a valid input type, please try again: ");
+      }
+    }
+    System.out.print("\nPlease, type the ammount of money (EUR) of your bid." 
+                    + "\nNote - decimal cents (if any) must be separated by a dot: ");
+    Float bid = null;
+    while(true) {
+      try {
+        bid = Float.parseFloat(input.nextLine());
+        server.placeBid(this.userId, idToBid, bid);
+        System.out.println("[BID INFO] Bid placed succesfully.");
+        return;
+      } catch (Exception e) {
+        System.out.print("ERROR: Not a valid input type, please try again: ");
+      }
+    }
   }
 
   /*
@@ -263,10 +291,12 @@ public class Client {
               + "\nBuyer: " + sold.getBestBidUser() 
               + "\nBid closed.\n");
           }
+          System.out.println("\nBID LOGS: \n" + sold.getAuctionLogs());
           this.userAuctions.remove(idToClose);
           return;
         } catch (RemoteException e) {
           System.out.println("ERROR: Retreiving auction listing form server. Try again.\n");
+          e.printStackTrace();
           return;
         }
 
