@@ -4,24 +4,22 @@ import java.util.ArrayList;
 public class AuctionListing implements Serializable {
 
   private AuctionItem item;
-  private Integer auctionId;
   private Float startingPrice;
   private Float reservePrice;
   private Float currentPrice;
-  private String bestBidUser;
+  private AuctionUser bestBidUser;
   private Boolean auctionOpen;
   private ArrayList<String> auctionLogs;
 
-  public AuctionListing(Integer auctionId, AuctionItem item,
+  public AuctionListing(AuctionItem item,
       Float startingPrice, Float reservePrice) {
 
     this.item = item;
-    this.auctionId = auctionId;
     this.reservePrice = reservePrice;
     this.startingPrice = startingPrice;
     this.currentPrice = 0.0f;
-    this.bestBidUser = "None";
-    this.auctionOpen = true;
+    this.bestBidUser = null;
+    this.auctionOpen = true; // unused for the moment
     this.auctionLogs = new ArrayList<String>();
   }
 
@@ -37,11 +35,11 @@ public class AuctionListing implements Serializable {
     this.auctionOpen = newStat;
   }
 
-  public String getBestBidUser() {
+  public AuctionUser getBestBidUser() {
     return bestBidUser;
   }
 
-  public void setBestBidUser(String bestBidUser) {
+  public void setBestBidUser(AuctionUser bestBidUser) {
     this.bestBidUser = bestBidUser;
   }
 
@@ -59,14 +57,6 @@ public class AuctionListing implements Serializable {
 
   public void setItem(AuctionItem item) {
     this.item = item;
-  }
-
-  public Integer getAuctionId() {
-    return auctionId;
-  }
-
-  public void setAuctionId(Integer auctionId) {
-    this.auctionId = auctionId;
   }
 
   public Float getStartingPrice() {

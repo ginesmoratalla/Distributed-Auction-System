@@ -25,7 +25,8 @@ public class Client {
         IAuctionSystem server = connectToServer("LZSCC.311 auction server");
         System.out.print("\nPlease, type your username: ");
         Scanner input = new Scanner(System.in);
-        Client user = new Client(input.nextLine(), server.addUser());
+        String uName = input.nextLine();
+        Client user = new Client(uName, server.addUser(uName));
 
         // Client Loop
         Integer operation = 0;
@@ -97,6 +98,10 @@ public class Client {
 
       case 2:
         createAuction(server, input);
+        return false;
+
+      case 3:
+        placeBid(server, input);
         return false;
 
       case 4:
@@ -202,7 +207,7 @@ public class Client {
       }
     }
     try {
-      Integer id = server.openAuction(this.userName, name, description,
+      Integer id = server.openAuction(this.userId, name, description,
           condition, reservePrice, startingPrice);
       this.userAuctions.put(id, name);
       System.out.println("\n[AUCTION SUCCESS] Created auction for \""
@@ -213,6 +218,16 @@ public class Client {
     } catch (Exception e) {
       System.out.println("\nERROR: unable to create auction listing\n");
       e.printStackTrace();
+    }
+  }
+
+  public void placeBid(IAuctionSystem server, Scanner input) {
+    try {
+      System.out.println("Retreiving available items...\n"
+        + server.getAuctionedItems()
+      );
+    } catch (Exception e) {
+      System.out.println("ERROR: unable to retreive item list from server. Going back...\n");
     }
   }
 
