@@ -9,7 +9,7 @@ public class AuctionListing implements Serializable {
   private Float currentPrice;
   private AuctionUser bestBidUser;
   private Boolean auctionOpen;
-  private ArrayList<String> auctionLogs;
+  private String auctionLogs;
 
   public AuctionListing(AuctionItem item,
       Float startingPrice, Float reservePrice) {
@@ -20,11 +20,15 @@ public class AuctionListing implements Serializable {
     this.currentPrice = 0.0f;
     this.bestBidUser = null;
     this.auctionOpen = true; // unused for the moment
-    this.auctionLogs = new ArrayList<String>();
+    this.auctionLogs = "--- AUCTION LOGS ---\n";
   }
 
-  public ArrayList<String> getAuctionLogs() {
+  public String getAuctionLogs() {
     return this.auctionLogs;
+  }
+
+  public void appendAuctionLog(String newLog) {
+    this.auctionLogs += newLog;
   }
 
   public Boolean isAcutionOpen() {

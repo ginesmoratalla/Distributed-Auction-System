@@ -138,9 +138,10 @@ public class Client {
       AuctionItem item = server.getSpec((int) itemId, this.userName);
       if (item != null) {
         String introString = "\n--- Item " + itemId + " details ---";
-        System.out.println(introString + "\nName: " + item.getItemTitle() +
-            "\nDescription: " + item.getItemDescription() +
-            "\nCondition: " + item.getItemCondition() + "\n"
+        System.out.println(introString + "\nName: " + item.getItemTitle()
+            + "\nDescription: " + item.getItemDescription() 
+            + "\nCondition: "   + item.getItemCondition()
+            + "\n"
             + "-".repeat(introString.length()) + "\n");
       } else {
         System.out.println("\nERROR: Item with ID: " + itemId +
@@ -288,14 +289,14 @@ public class Client {
           } else {
             System.out.println("[AUCTION INFO] Item was succesfully sold for "
               + sold.getCurrentPrice() + " EUR."
-              + "\nBuyer: " + sold.getBestBidUser() 
+              + "\nBuyer: " + sold.getBestBidUser().getUserName() 
               + "\nBid closed.\n");
           }
           System.out.println("\nBID LOGS: \n" + sold.getAuctionLogs());
           this.userAuctions.remove(idToClose);
           return;
         } catch (RemoteException e) {
-          System.out.println("ERROR: Retreiving auction listing form server. Try again.\n");
+          System.out.println("ERROR: Retreiving auction listing from server. Try again.\n");
           e.printStackTrace();
           return;
         }

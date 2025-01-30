@@ -1,4 +1,6 @@
-public class AuctionUser {
+import java.io.Serializable;
+
+public class AuctionUser implements Serializable {
   private String userName;
   private Integer userId;
   public AuctionUser(String name, Integer id) {

@@ -116,10 +116,10 @@ public class Server implements IAuctionSystem {
    */
   public void placeBid(Integer userId, Integer auctionListingId, Float bid) throws RemoteException {
     AuctionListing auctionListing = this.auctionList.get(auctionListingId);
-    auctionListing.getAuctionLogs().add("[AUCTION LOG] User "
-                                        + this.userList.get(userId).getUserName()
-                                        + " placed a bid of " + bid
-                                        + " EUR.\n");
+    auctionListing.appendAuctionLog("[AUCTION LOG] User "
+            + this.userList.get(userId).getUserName()
+            + " placed a bid of " + bid
+            + " EUR.\n");
     if ((auctionListing.getCurrentPrice() < bid) && (bid >= auctionListing.getStartingPrice())) {
       auctionListing.setCurrentPrice(bid);
       auctionListing.setBestBidUser(this.userList.get(userId));
