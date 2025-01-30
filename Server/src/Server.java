@@ -7,15 +7,14 @@ import java.util.HashMap;
 
 public class Server implements IAuctionSystem {
   private HashMap<Integer, AuctionListing> auctionList;
-  private HashMap<Integer, AuctionUser> userList;
+  private HashMap<Integer, String> userList;
   private static Integer globalId = 0;
   private Random random;
 
   public Server() {
-
     super();
     this.auctionList = new HashMap<Integer, AuctionListing>();
-    this.userList = new HashMap<Integer, AuctionUser>();
+    this.userList = new HashMap<Integer, String>();
     this.random = new Random();
 
     // PLACEHOLDER ITEMS
@@ -39,11 +38,20 @@ public class Server implements IAuctionSystem {
   }
 
   /*
-   * Adds listing to server's global list
+   * Adds aucitoned item listing to server's global list
    */
   private AuctionListing addListing(Integer id, AuctionListing listing) {
     this.auctionList.put(id, listing);
     return listing;
+  }
+
+  /*
+   * Method for RMI
+   *
+   * Checks whether a username is used.
+   */
+  public Boolean userNameExists(String uName) throws RemoteException {
+    return this.userList.containsValue(uName);
   }
 
   /*
@@ -57,7 +65,7 @@ public class Server implements IAuctionSystem {
       userId = random.nextInt();
     }
     System.out.println("User " + userName + " got assigned ID " + userId);
-    this.userList.put(userId, new AuctionUser(userName, userId));
+    this.userList.put(userId, userName);
     return userId;
   }
 
@@ -85,7 +93,11 @@ public class Server implements IAuctionSystem {
 
     AuctionItem item = new AuctionItem(assignItemId(), itName, itDesc, itCond);
     AuctionListing listing = addListing(item.getItemId(), new AuctionListing(item, startPrice, resPrice));
-    System.out.println("User \"" + this.userList.get(userId).getUserName() + "\" created auction for \"" + itName + "\", id: " + item.getItemId());
+    System.out.println("User \""
+                        + this.userList.get(userId)
+                        + "\" created auction for \""
+                        + itName + "\", id: "
+                        + item.getItemId());
     return listing.getItem().getItemId();
   }
 
@@ -117,7 +129,7 @@ public class Server implements IAuctionSystem {
   public void placeBid(Integer userId, Integer auctionListingId, Float bid) throws RemoteException {
     AuctionListing auctionListing = this.auctionList.get(auctionListingId);
     auctionListing.appendAuctionLog("[AUCTION LOG] User "
-            + this.userList.get(userId).getUserName()
+            + this.userList.get(userId)
             + " placed a bid of " + bid
             + " EUR.\n");
     if ((auctionListing.getCurrentPrice() < bid) && (bid >= auctionListing.getStartingPrice())) {

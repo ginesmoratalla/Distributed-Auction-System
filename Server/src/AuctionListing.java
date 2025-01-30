@@ -7,7 +7,7 @@ public class AuctionListing implements Serializable {
   private Float startingPrice;
   private Float reservePrice;
   private Float currentPrice;
-  private AuctionUser bestBidUser;
+  private String bestBidUser;
   private Boolean auctionOpen;
   private String auctionLogs;
 
@@ -39,11 +39,11 @@ public class AuctionListing implements Serializable {
     this.auctionOpen = newStat;
   }
 
-  public AuctionUser getBestBidUser() {
+  public String getBestBidUser() {
     return bestBidUser;
   }
 
-  public void setBestBidUser(AuctionUser bestBidUser) {
+  public void setBestBidUser(String bestBidUser) {
     this.bestBidUser = bestBidUser;
   }
 

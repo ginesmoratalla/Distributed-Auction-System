@@ -20,4 +20,5 @@ public interface IAuctionSystem extends Remote {
       throws RemoteException;
 
   public Boolean idMatchesExistingItem(Integer id) throws RemoteException;
+  public Boolean userNameExists(String uName) throws RemoteException;
 }

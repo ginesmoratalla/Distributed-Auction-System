@@ -25,7 +25,13 @@ public class Client {
         IAuctionSystem server = connectToServer("LZSCC.311 auction server");
         System.out.print("\nPlease, type your username: ");
         Scanner input = new Scanner(System.in);
-        String uName = input.nextLine();
+        String uName = null;
+        while(true) {
+          uName = input.nextLine();
+          if (!server.userNameExists(uName)) break;
+          System.out.print("\nUsername already in use, try another username: ");
+        }
+        System.out.println("Logging in...");
         Client user = new Client(uName, server.addUser(uName));
 
         // Client Loop
@@ -289,10 +295,10 @@ public class Client {
           } else {
             System.out.println("[AUCTION INFO] Item was succesfully sold for "
               + sold.getCurrentPrice() + " EUR."
-              + "\nBuyer: " + sold.getBestBidUser().getUserName() 
-              + "\nBid closed.\n");
+              + "\n[AUCTION INFO] Buyer: " + sold.getBestBidUser()
+              + "\n[AUCTION INFO] Bid closed.\n");
           }
-          System.out.println("\nBID LOGS: \n" + sold.getAuctionLogs());
+          System.out.println(sold.getAuctionLogs());
           this.userAuctions.remove(idToClose);
           return;
         } catch (RemoteException e) {
