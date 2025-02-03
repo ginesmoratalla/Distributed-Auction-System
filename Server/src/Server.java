@@ -147,6 +147,10 @@ public class Server implements IAuctionSystem {
     return this.auctionList.containsKey(id);
   }
 
+  public Boolean isPriceAboveMinimum(Integer id, Float price) throws RemoteException {
+    return this.auctionList.get(id).getStartingPrice().compareTo(price) <= 0;
+  }
+
   public String getAuctionedItems() throws RemoteException {
     String introStr = "\n===== ALL AVAILABLE AUCTIONED ITEMS ======\n";
     String strToStd = introStr;

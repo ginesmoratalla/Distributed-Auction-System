@@ -20,6 +20,7 @@ public interface IAuctionSystem extends Remote {
   public void placeBid(Integer userId, Integer auctionListingId, Float bid)
       throws RemoteException;
 
+  public Boolean isPriceAboveMinimum(Integer id, Float price) throws RemoteException;
   public Boolean idMatchesExistingItem(Integer id) throws RemoteException;
   public Boolean userNameExists(String uName) throws RemoteException;
 }

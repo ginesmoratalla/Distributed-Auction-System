@@ -142,7 +142,7 @@ public class Client {
                            "\nDescription: " + item.getItemDescription() +
                            "\nCondition: " + item.getItemCondition() + "\n"
                            + "-".repeat(introString.length()) + "\n");
-        System.out.print("Do you want to place a bid on this" + item.getItemTitle() + "? (yes/no): ");
+        System.out.print("Do you want to place a bid on this " + item.getItemTitle() + "? (yes/no): ");
         String yesToBid = input.nextLine();
         if(yesToBid.equals("yes")) {
           this.executeItemOperation(2, itemId, server, input);
@@ -299,6 +299,10 @@ public class Client {
     while (true) {
       try {
         bid = Float.parseFloat(input.nextLine());
+        if (!server.isPriceAboveMinimum(idToBid, bid)) {
+          System.out.print("This offer is below the starting price, try another amount: ");
+          continue;
+        }
         server.placeBid(this.userId, idToBid, bid);
         System.out.println("[BID INFO] Bid placed succesfully.");
         return;
