@@ -148,6 +148,7 @@ public class Server implements IAuctionSystem {
   }
 
   public Boolean isPriceAboveMinimum(Integer id, Float price) throws RemoteException {
+    if (!this.auctionList.containsKey(id)) return true;
     return this.auctionList.get(id).getStartingPrice().compareTo(price) <= 0;
   }
 

@@ -64,7 +64,7 @@ public class Client {
       throws RemoteException {
     try {
       Registry registry = LocateRegistry.getRegistry("localhost");
-      IAuctionSystem server = (IAuctionSystem)registry.lookup(name);
+      IAuctionSystem server = (IAuctionSystem) registry.lookup(name);
       System.out.println("Connected to server \"" + name + "\"");
       return server;
     } catch (Exception e) {
@@ -302,13 +302,22 @@ public class Client {
         if (!server.isPriceAboveMinimum(idToBid, bid)) {
           System.out.print("This offer is below the starting price, try another amount: ");
           continue;
-        }
-        server.placeBid(this.userId, idToBid, bid);
-        System.out.println("[BID INFO] Bid placed succesfully.");
-        return;
+        } 
       } catch (Exception e) {
         System.out.print("ERROR: Not a valid input type, please try again: ");
       }
+
+      try {
+        if (!server.idMatchesExistingItem(idToBid)) {
+          System.out.println("ERROR connecting to the server. Bid was not placed");
+          return;
+        }
+        server.placeBid(this.userId, idToBid, bid);
+        System.out.println("[BID INFO] Bid placed succesfully.");
+      } catch (Exception e) {
+        System.out.println("ERROR connecting to the server. Bid was not placed");
+      }
+      return;
     }
   }
 
