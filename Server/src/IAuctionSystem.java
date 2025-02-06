@@ -25,4 +25,5 @@ public interface IAuctionSystem extends Remote {
   public Boolean userNameExists(String userName) throws RemoteException;
   public String returnItemTypes() throws RemoteException;
   public Boolean itemTypeExists(String typeStr);
+  public String retreiveItemsByType(String type);
 }

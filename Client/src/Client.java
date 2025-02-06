@@ -45,9 +45,9 @@ public class Client {
         Integer operation = 0;
         while (true) {
           System.out.println("\n--- Available Operations ---"
-                             + "\n1. Browse all available items"
-                             + "\n2. Create auction for an item"
-                             + "\n3. Close your auction"
+                             + "\n1. Create auction for an item"
+                             + "\n2. Close your auction"
+                             + "\n3. Select forward auction mode"
                              + "\n4. Select reverse auction mode"
                              + "\n0. Exit"
                              + "\n");
@@ -98,19 +98,19 @@ public class Client {
       return true;
 
     case 1:
-      viewItems(server, input);
-      return false;
-
-    case 2:
       createAuction(server, input);
       return false;
 
-    case 3:
+    case 2:
       closeAuction(server, input);
       return false;
 
+    case 3:
+      viewItems(server, input);
+      return false;
+
     case 4:
-      // viewReverseAuction(server, input);
+      viewReverseAuction(server, input);
       return false;
 
     default:
@@ -135,7 +135,7 @@ public class Client {
                            + "\nCondition: " + item.getItemCondition() + "\n"
                            + "-".repeat(introString.length()) + "\n");
         System.out.print("Do you want to place a bid on this " + item.getItemTitle() + "? (yes/no): ");
-        if(input.nextLine().equals("yes")) {
+        if(this.inputManager.getStringFromClient(input).equals("yes")) {
           this.executeItemOperation(2, itemId, server, input);
         }
 
@@ -165,7 +165,7 @@ public class Client {
         if (server.itemTypeExists(type)) {
           break;
         }
-        System.out.print("Wrong type. Try again: ");
+        System.out.print("Type does not exist. Try again: ");
       }
     } catch (Exception e) {
       System.out.println("ERROR: Connecting to the server. Try again...");
@@ -204,6 +204,36 @@ public class Client {
     } catch (Exception e) {
       System.out.println("\nERROR: unable to create auction listing\n");
       e.printStackTrace();
+    }
+  }
+
+  /*
+   *
+   */
+  public void viewReverseAuction(IAuctionSystem server, Scanner input) {
+    String type = null;
+    Integer idToView = null;
+    try {
+      System.out.println(server.returnItemTypes());
+      System.out.print("Select the type of item for the reverse auction: ");
+      while(true) {
+        type = this.inputManager.getStringFromClient(input);
+        if (server.itemTypeExists(type)) {
+          break;
+        }
+        System.out.print("Wrong type. Try again: ");
+      }
+      System.out.println("\n" + server.retreiveItemsByType(type));
+      System.out.print("Select item by ID: ");
+      while(true) {
+        idToView = this.inputManager.getIntegerFromClient(input);
+        if(server.idMatchesExistingItem(idToView)) break;
+        System.out.print("ID does not match an entry in the database, try anotherone: ");
+      }
+      getItemSpec(server, input, idToView);
+    } catch (Exception e) {
+      System.out.println("ERROR: Connecting to the server. Try again...");
+      return;
     }
   }
 
