@@ -6,7 +6,7 @@ public interface IAuctionSystem extends Remote {
   public AuctionItem getSpec(int itemId, String clientId)
       throws RemoteException;
 
-  public Integer openAuction(Integer userId, String itName, String itDesc,
+  public Integer openAuction(Integer userId, String itName, String itType, String itDesc,
       Integer itCond, Float resPrice, Float startPrice)
       throws RemoteException;
 
@@ -22,5 +22,7 @@ public interface IAuctionSystem extends Remote {
 
   public Boolean isPriceAboveMinimum(Integer id, Float price) throws RemoteException;
   public Boolean idMatchesExistingItem(Integer id) throws RemoteException;
-  public Boolean userNameExists(String uName) throws RemoteException;
+  public Boolean userNameExists(String userName) throws RemoteException;
+  public String returnItemTypes() throws RemoteException;
+  public Boolean itemTypeExists(String typeStr);
 }

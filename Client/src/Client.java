@@ -10,21 +10,26 @@ public class Client {
   private final String userName;
   private final Integer userId;
   private HashMap<Integer, String> userAuctions;
+  private ClientInputManager inputManager;
 
   public Client(String userName, Integer userId) {
     this.userName = userName;
     this.userId = userId;
     this.userAuctions = new HashMap<Integer, String>();
+    this.inputManager = new ClientInputManager();
   }
 
   public static void main(String[] args) {
 
+    Scanner input = new Scanner(System.in);
+
     // Outer loop in case server connection fails
     while (true) {
+
       try {
         IAuctionSystem server = connectToServer("LZSCC.311 auction server");
+
         System.out.print("\nPlease, type your username: ");
-        Scanner input = new Scanner(System.in);
         String uName = null;
         while (true) {
           uName = input.nextLine();
@@ -32,24 +37,25 @@ public class Client {
             break;
           System.out.print("\nUsername already in use, try another username: ");
         }
+
         System.out.println("Logging in...");
         Client user = new Client(uName, server.addUser(uName));
 
-        // Client Loop
+        // Main client Loop
         Integer operation = 0;
         while (true) {
           System.out.println("\n--- Available Operations ---"
-                             + "\n1. View available items"
+                             + "\n1. Browse all available items"
                              + "\n2. Create auction for an item"
                              + "\n3. Close your auction"
+                             + "\n4. Select reverse auction mode"
                              + "\n0. Exit"
                              + "\n");
 
           System.out.print("Select an operation (type the number): ");
-          operation = user.getOperation(input.nextLine());
+          operation = user.inputManager.getOperation(input.nextLine());
           boolean exit = user.execOperation(operation, server, input);
-          if (exit)
-            System.exit(0);
+          if (exit) { System.exit(0); }
         }
 
       } catch (Exception e) {
@@ -60,27 +66,22 @@ public class Client {
     }
   }
 
+  /*
+   * Connect to RMI registry and get stub
+   *
+   */
   public static IAuctionSystem connectToServer(String name)
       throws RemoteException {
     try {
       Registry registry = LocateRegistry.getRegistry("localhost");
-      IAuctionSystem server = (IAuctionSystem) registry.lookup(name);
+      IAuctionSystem stub = (IAuctionSystem) registry.lookup(name);
       System.out.println("Connected to server \"" + name + "\"");
-      return server;
+      return stub;
     } catch (Exception e) {
       System.err.println("Exception:");
       e.printStackTrace();
     }
     return null;
-  }
-
-  public Integer getOperation(String operation) {
-    try {
-      Integer opInteger = Integer.parseInt(operation);
-      return opInteger;
-    } catch (Exception e) {
-      return -1;
-    }
   }
 
   /*
@@ -108,6 +109,10 @@ public class Client {
       closeAuction(server, input);
       return false;
 
+    case 4:
+      // viewReverseAuction(server, input);
+      return false;
+
     default:
       System.out.println("\nERROR: Unrecognized operation, try again.");
       return false;
@@ -115,36 +120,22 @@ public class Client {
   }
 
   /*
-   * Gets an integer number from stdin as item ID
-   */
-  public Integer getNumberedItemId(Scanner input) {
-    while (true) {
-      try {
-        Integer id = Integer.parseInt(input.nextLine());
-        return id;
-      } catch (Exception e) {
-        System.out.println("Not a valid item ID. Try again:\n");
-        continue;
-      }
-    }
-  }
-
-  /*
    * Returns item details from server
    */
   public void getItemSpec(IAuctionSystem server, Scanner input, Integer itemId)
-      throws RemoteException {
+      throws RemoteException
+  {
     try {
-      AuctionItem item = server.getSpec((int)itemId, this.userName);
+      AuctionItem item = server.getSpec(itemId, this.userName);
       if (item != null) {
         String introString = "\n--- Item " + itemId + " details ---";
-        System.out.println(introString + "\nName: " + item.getItemTitle() +
-                           "\nDescription: " + item.getItemDescription() +
-                           "\nCondition: " + item.getItemCondition() + "\n"
+        System.out.println(introString + "\nName: "
+                           + item.getItemTitle()
+                           + "\nDescription: " + item.getItemDescription()
+                           + "\nCondition: " + item.getItemCondition() + "\n"
                            + "-".repeat(introString.length()) + "\n");
         System.out.print("Do you want to place a bid on this " + item.getItemTitle() + "? (yes/no): ");
-        String yesToBid = input.nextLine();
-        if(yesToBid.equals("yes")) {
+        if(input.nextLine().equals("yes")) {
           this.executeItemOperation(2, itemId, server, input);
         }
 
@@ -160,11 +151,26 @@ public class Client {
 
   public void createAuction(IAuctionSystem server, Scanner input) {
 
-    System.out.println("\nCreating new auction...");
-    System.out.print("\nWhat is the name of your item? ");
-    String name = input.nextLine();
+    System.out.println("\nCreating new auction...\nWhat is the name of your item? ");
+    String name = this.inputManager.getStringFromClient(input);
     System.out.print("\nGive an item description: ");
-    String description = input.nextLine();
+    String description = this.inputManager.getStringFromClient(input);
+
+    String type = null;
+    try {
+      System.out.println(server.returnItemTypes());
+      System.out.print("Select the type of your item among the list: ");
+      while(true) {
+        type = this.inputManager.getStringFromClient(input);
+        if (server.itemTypeExists(type)) {
+          break;
+        }
+        System.out.print("Wrong type. Try again: ");
+      }
+    } catch (Exception e) {
+      System.out.println("ERROR: Connecting to the server. Try again...");
+      return;
+    }
 
     System.out.print(
         "\nIs your item new or used?"
@@ -175,43 +181,21 @@ public class Client {
         + "4 (moderately used)\n"
         + "5 (heavily used)\n"
         + "PSA: Anything outside of this scale will default to \"Used\": ");
-    Integer condition = 0;
-    while (true) {
-      try {
-        condition = Integer.parseInt(input.nextLine());
-        break;
-      } catch (Exception e) {
-        System.out.print("ERROR: Not a valid input type, please try again: ");
-      }
-    }
+    Integer condition = this.inputManager.getIntegerFromClient(input);
 
     System.out.print(
         "\nWhat is the minimum price you are willing to sell the item for? "
         + "(EUR)."
         + "\nMake sure cent decimals (if any) are separated by a dot: ");
-    Float reservePrice = 0.0f;
-    while (true) {
-      try {
-        reservePrice = Float.parseFloat(input.nextLine());
-        break;
-      } catch (Exception e) {
-        System.out.print("ERROR: Not a valid input type, please try again: ");
-      }
-    }
+    Float reservePrice = this.inputManager.getFloatFromClient(input);
+
     System.out.print(
         "\nSelect a starting price (EUR)."
         + "\nMake sure cent decimals (if any) are separated by a dot: ");
-    Float startingPrice = 0.0f;
-    while (true) {
-      try {
-        startingPrice = Float.parseFloat(input.nextLine());
-        break;
-      } catch (Exception e) {
-        System.out.print("ERROR: Not a valid input type, please try again: ");
-      }
-    }
+    Float startingPrice = this.inputManager.getFloatFromClient(input);
+
     try {
-      Integer id = server.openAuction(this.userId, name, description, condition,
+      Integer id = server.openAuction(this.userId, name, type, description, condition,
                                       reservePrice, startingPrice);
       this.userAuctions.put(id, name);
       System.out.println("\n[AUCTION SUCCESS] Created auction for \"" + name +
@@ -236,7 +220,7 @@ public class Client {
     Integer selectedId = null;
     while (true) {
       try {
-        selectedId = Integer.parseInt(input.nextLine());
+        selectedId = this.inputManager.getIntegerFromClient(input);
         if (!server.idMatchesExistingItem(selectedId)) {
           System.out.print("Item corresponding to " + selectedId +
                            " does not exist, try another ID: ");
@@ -255,15 +239,8 @@ public class Client {
                        + "\n0. Return to home"
                        + "\n");
     System.out.print("Please, select an operation: ");
-    while (true) {
-      try {
-        operation = Integer.parseInt(input.nextLine());
-        this.executeItemOperation(operation, selectedId, server, input);
-        break;
-      } catch (Exception e) {
-        System.out.print("ERROR: Not a valid input type, please try again: ");
-      }
-    }
+    operation = this.inputManager.getIntegerFromClient(input);
+    this.executeItemOperation(operation, selectedId, server, input);
     return;
   }
 
@@ -297,28 +274,29 @@ public class Client {
         + "\nNote - decimal cents (if any) must be separated by a dot: ");
     Float bid = null;
     while (true) {
+    bid = this.inputManager.getFloatFromClient(input);
       try {
-        bid = Float.parseFloat(input.nextLine());
         if (!server.isPriceAboveMinimum(idToBid, bid)) {
           System.out.print("This offer is below the starting price, try another amount: ");
           continue;
         } 
+        break;
       } catch (Exception e) {
         System.out.print("ERROR: Not a valid input type, please try again: ");
       }
+    }
 
-      try {
-        if (!server.idMatchesExistingItem(idToBid)) {
-          System.out.println("ERROR connecting to the server. Bid was not placed");
-          return;
-        }
-        server.placeBid(this.userId, idToBid, bid);
-        System.out.println("[BID INFO] Bid placed succesfully.");
-      } catch (Exception e) {
+    try {
+      // Item was sold before bid could be placed
+      if (!server.idMatchesExistingItem(idToBid)) {
         System.out.println("ERROR connecting to the server. Bid was not placed");
       }
-      return;
+      server.placeBid(this.userId, idToBid, bid);
+      System.out.println("[BID INFO] Bid placed succesfully.");
+    } catch (Exception e) {
+      System.out.println("ERROR connecting to the server. Bid was not placed");
     }
+    return;
   }
 
   /*
@@ -332,46 +310,38 @@ public class Client {
 
     System.out.print(
         "\nSelect which auction to close (type corresponding ID): ");
+
+    Integer idToClose = null;
     while (true) {
-      // Try parsing input into Integer ID
-      try {
-        Integer idToClose = Integer.parseInt(input.nextLine());
-        if (!this.userAuctions.containsKey(idToClose)) {
-          System.out.print(
-              "\nID not amongst your auctioned items, please try again: ");
-          continue;
-        }
-        // Try remote method
-        try {
-          AuctionListing sold = server.closeAuction(this.userId, idToClose);
-          if (sold.getCurrentPrice() == null) {
-            System.out.println("[ERROR] Something went wrong...\n");
-
-          } else if (sold.getCurrentPrice() < sold.getReservePrice()) {
-            System.out.println("[AUCTION INFO] Item was not sold (did not " +
-                               "reach reserve price). Bid closed\n");
-
-          } else {
-            System.out.println(
-                "[AUCTION INFO] Item was succesfully sold for " +
-                sold.getCurrentPrice() + " EUR."
-                + "\n[AUCTION INFO] Buyer: " + sold.getBestBidUser() +
-                "\n[AUCTION INFO] Bid closed.\n");
-          }
-          System.out.println(sold.getAuctionLogs());
-          this.userAuctions.remove(idToClose);
-          return;
-        } catch (RemoteException e) {
-          System.out.println(
-              "ERROR: Retreiving auction listing from server. Try again.\n");
-          e.printStackTrace();
-          return;
-        }
-
-      } catch (Exception e) {
-        System.out.print("Not a valid ID format, please try again: ");
-        continue;
+      idToClose = this.inputManager.getIntegerFromClient(input);
+      if (this.userAuctions.containsKey(idToClose)) {
+        break;
       }
+      System.out.print(
+          "\nID not amongst your auctioned items, please try again: ");
+    }
+    // Try remote method
+    try {
+      AuctionListing sold = server.closeAuction(this.userId, idToClose);
+      if (sold.getCurrentPrice() == null) {
+        System.out.println("[ERROR] Something went wrong...\n");
+
+      } else if (sold.getCurrentPrice() < sold.getReservePrice()) {
+        System.out.println("[AUCTION INFO] Item was not sold (did not " +
+                           "reach reserve price). Bid closed\n");
+      } else {
+        System.out.println(
+            "[AUCTION INFO] Item was succesfully sold for " +
+            sold.getCurrentPrice() + " EUR."
+            + "\n[AUCTION INFO] Buyer: " + sold.getBestBidUser() +
+            "\n[AUCTION INFO] Bid closed.\n");
+      }
+      System.out.println(sold.getAuctionLogs());
+      this.userAuctions.remove(idToClose);
+    } catch (RemoteException e) {
+      e.printStackTrace();
+      System.out.println(
+          "ERROR: Retreiving auction listing from server.\n");
     }
   }
 

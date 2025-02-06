@@ -6,24 +6,33 @@ public class AuctionItem implements Serializable {
   private int itemId;
   private String itemTitle;
   private String itemDescription;
+  private String itemType;
 
-  public AuctionItem(Integer itemId, String itemTitle, String itemDescription,
-                     Integer conditionScale) {
+
+  public AuctionItem(Integer itemId, String itemTitle, String itemType, String itemDescription,
+                     Integer conditionScale)
+  {
     this.itemId = itemId;
     this.itemTitle = itemTitle;
     this.itemDescription = itemDescription;
+    this.itemType = itemType;
     setItemCondition(conditionScale);
   }
 
   public Integer getItemId() { return itemId; }
   public void setItemId(Integer itemId) { this.itemId = itemId; }
+
   public String getItemTitle() { return itemTitle; }
   public void setItemTitle(String itemTitle) { this.itemTitle = itemTitle; }
-  public String getItemDescription() { return itemDescription; }
 
+  public String getItemDescription() { return itemDescription; }
   public void setItemDescription(String itemDescription) {
     this.itemDescription = itemDescription;
   }
+  public String getItemType() {
+    return this.itemType;
+  }
+
   public void setItemCondition(Integer conditionScale) {
     switch (conditionScale) {
       case 5:

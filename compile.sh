@@ -9,7 +9,7 @@ clientPath="/Client"
   cd "${absPath}${serverPath}/src"
   javac -d "${absPath}${serverPath}/target" *.java
   ls "${absPath}${serverPath}/target" \
-    | grep -v "Server.class" \
+    | grep -Ev "^(Server.class|AuctionUser.class|AuctionItemTypeEnum.class)&" \
     | xargs -I {} cp "${absPath}${serverPath}/target/{}" "${absPath}${clientPath}/target"
 )
 
