@@ -4,5 +4,5 @@ absPath=$(pwd)
 
 (
   cd "${absPath}/Server/target"
-  java Server
+  java AuctionServer
 )

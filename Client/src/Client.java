@@ -9,13 +9,13 @@ public class Client {
 
   private final String userName;
   private final Integer userId;
-  private HashMap<Integer, String> userAuctions;
+  private HashMap<Integer, AuctionListing> userAuctions;
   private ClientInputManager inputManager;
 
   public Client(String userName, Integer userId) {
     this.userName = userName;
     this.userId = userId;
-    this.userAuctions = new HashMap<Integer, String>();
+    this.userAuctions = new HashMap<Integer, AuctionListing>();
     this.inputManager = new ClientInputManager();
   }
 
@@ -195,11 +195,11 @@ public class Client {
     Float startingPrice = this.inputManager.getFloatFromClient(input);
 
     try {
-      Integer id = server.openAuction(this.userId, name, type, description, condition,
+      AuctionListing listing = server.openAuction(this.userId, name, type, description, condition,
                                       reservePrice, startingPrice);
-      this.userAuctions.put(id, name);
+      this.userAuctions.put(listing.getItem().getItemId(), listing);
       System.out.println("\n[AUCTION SUCCESS] Created auction for \"" + name +
-                         "\".\nCorresponding ID: " + id);
+                         "\".\nCorresponding ID: " + listing.getItem().getItemId());
 
     } catch (Exception e) {
       System.out.println("\nERROR: unable to create auction listing\n");
@@ -223,7 +223,12 @@ public class Client {
         }
         System.out.print("Wrong type. Try again: ");
       }
-      System.out.println("\n" + server.retreiveItemsByType(type));
+      String listByType = server.retrieveItemsByType(type);
+      if (listByType == null) {
+        System.out.println("No items of type " + type + ". Going back...");
+        return;
+      }
+      System.out.println("\n" + listByType);
       System.out.print("Select item by ID: ");
       while(true) {
         idToView = this.inputManager.getIntegerFromClient(input);
@@ -239,8 +244,13 @@ public class Client {
 
   public void viewItems(IAuctionSystem server, Scanner input) {
     try {
-      System.out.println("Retreiving available items...\n" +
-                         server.getAuctionedItems());
+      System.out.println("Retreiving available items...\n");
+      String auctionedItems = server.getAuctionedItems();
+      if (auctionedItems == null) {
+        System.out.println("No auctioned items. Going back...");
+        return;
+      }
+      System.out.println(auctionedItems);
     } catch (Exception e) {
       System.out.println(
           "ERROR: unable to retreive item list from server. Going back...\n");
@@ -309,7 +319,7 @@ public class Client {
         if (!server.isPriceAboveMinimum(idToBid, bid)) {
           System.out.print("This offer is below the starting price, try another amount: ");
           continue;
-        } 
+        }
         break;
       } catch (Exception e) {
         System.out.print("ERROR: Not a valid input type, please try again: ");
@@ -352,7 +362,7 @@ public class Client {
     }
     // Try remote method
     try {
-      AuctionListing sold = server.closeAuction(this.userId, idToClose);
+      AuctionListing sold = server.closeAuction(idToClose, this.userAuctions.get(idToClose).getItem().getItemType(), this.userId);
       if (sold.getCurrentPrice() == null) {
         System.out.println("[ERROR] Something went wrong...\n");
 
@@ -371,7 +381,7 @@ public class Client {
     } catch (RemoteException e) {
       e.printStackTrace();
       System.out.println(
-          "ERROR: Retreiving auction listing from server.\n");
+          "ERROR: Retrieving auction listing from server.\n");
     }
   }
 
@@ -385,9 +395,9 @@ public class Client {
       return;
     }
     System.out.println("\n---" + this.userName + " auctioned items ---");
-    for (Map.Entry<Integer, String> entry : this.userAuctions.entrySet()) {
+    for (Map.Entry<Integer, AuctionListing> entry : this.userAuctions.entrySet()) {
       System.out.println("ID: " + entry.getKey() +
-                         " | item: " + entry.getValue());
+                         " | item: " + entry.getValue().getItem().getItemTitle());
     }
   }
 }
