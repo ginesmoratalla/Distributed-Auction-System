@@ -151,14 +151,14 @@ public class Client {
 
   public void createAuction(IAuctionSystem server, Scanner input) {
 
-    System.out.println("\nCreating new auction...\nWhat is the name of your item? ");
+    System.out.print("\nCreating new auction...\nWhat is the name of your item? ");
     String name = this.inputManager.getStringFromClient(input);
     System.out.print("\nGive an item description: ");
     String description = this.inputManager.getStringFromClient(input);
 
     String type = null;
     try {
-      System.out.println(server.returnItemTypes());
+      System.out.println(server.retrieveItemTypes());
       System.out.print("Select the type of your item among the list: ");
       while(true) {
         type = this.inputManager.getStringFromClient(input);
@@ -214,7 +214,7 @@ public class Client {
     String type = null;
     Integer idToView = null;
     try {
-      System.out.println(server.returnItemTypes());
+      System.out.println(server.retrieveItemTypes());
       System.out.print("Select the type of item for the reverse auction: ");
       while(true) {
         type = this.inputManager.getStringFromClient(input);
@@ -316,8 +316,8 @@ public class Client {
     while (true) {
     bid = this.inputManager.getFloatFromClient(input);
       try {
-        if (!server.isPriceAboveMinimum(idToBid, bid)) {
-          System.out.print("This offer is below the starting price, try another amount: ");
+        if (!server.isBidPriceAcceptable(idToBid, bid)) {
+          System.out.print("This offer is below the current price, try another amount: ");
           continue;
         }
         break;

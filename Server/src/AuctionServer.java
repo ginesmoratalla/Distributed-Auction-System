@@ -8,6 +8,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
 // Misc imports
 import java.util.Random;
 
@@ -87,7 +88,7 @@ public class AuctionServer implements IAuctionSystem {
     if (this.auctionList.containsKey(itemLowerCase) && this.auctionList.get(itemLowerCase).containsKey(listingId)) {
       AuctionListing returnListing = this.auctionList.get(itemLowerCase).get(listingId);
       this.auctionList.get(itemLowerCase).remove(listingId);
-      System.out.println("> User " 
+      System.out.println("> User "
                         + this.userList.get(userId).getUserName()
                         + " closed auction with ID: " + listingId
       );
@@ -115,12 +116,12 @@ public class AuctionServer implements IAuctionSystem {
    * Returs a formatted list of item types (for reverse auctions)
    *
    */
-  public String returnItemTypes() throws RemoteException {
+  public String retrieveItemTypes() throws RemoteException {
     String formattedString = "--- Item Types ---\n";
     for (AuctionItemTypeEnum type : AuctionItemTypeEnum.values()) {
       formattedString += "> " + type.getValue() + "\n";
     }
-    formattedString += "RESPECT SPACES WHEN TYPING ITEM TYPE\n";
+    formattedString += "\nRESPECT SPACES WHEN TYPING ITEM TYPE\n";
     return formattedString;
   }
 
@@ -134,9 +135,9 @@ public class AuctionServer implements IAuctionSystem {
 
     AuctionItem item = new AuctionItem(assignItemId(), itName, itType, itDesc, itCond);
     AuctionListing listing = addListing(new AuctionListing(item, startPrice, resPrice));
-    System.out.println("> User \""
+    System.out.println("> User "
                         + this.userList.get(userId).getUserName()
-                        + "\" created auction for \""
+                        + " created auction for \""
                         + itName + "\", id: "
                         + item.getItemId());
     return listing;
@@ -224,10 +225,14 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Checks if the price prompted by a buyer exceeds the starting price for item
    */
-  public Boolean isPriceAboveMinimum(Integer itemId, Float price) throws RemoteException {
+  public Boolean isBidPriceAcceptable(Integer listingId, Float price) throws RemoteException {
     for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry : this.auctionList.entrySet()) {
-      if (entry.getValue().containsKey(itemId)) {
-        return entry.getValue().get(itemId).getStartingPrice().compareTo(price) <= 0;
+      if (entry.getValue().containsKey(listingId)) {
+        if (entry.getValue().get(listingId).getCurrentPrice() > 0.0f) {
+          return entry.getValue().get(listingId).getCurrentPrice().compareTo(price) < 0;
+        } else {
+          return entry.getValue().get(listingId).getStartingPrice().compareTo(price) <= 0;
+        }
       }
     }
     return true;
@@ -248,7 +253,7 @@ public class AuctionServer implements IAuctionSystem {
                   + "\n";
       }
     }
-    strToStd += "=".repeat(introStr.length()) + "\n";
+    strToStd += "=".repeat(introStr.length() - 2) + "\n";
     return strToStd;
   }
 
