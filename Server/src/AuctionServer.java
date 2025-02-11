@@ -150,7 +150,8 @@ public class AuctionServer implements IAuctionSystem {
    * of a specific type.
    */
   public String retrieveItemsByType(String type) throws RemoteException {
-    if (!this.auctionList.containsKey(type.toLowerCase())) return null;
+    if (!this.auctionList.containsKey(type.toLowerCase())
+          || this.auctionList.get(type.toLowerCase()).size() == 0) return null;
 
     String list = "--- All Available " + type + "---\n";
     for (Map.Entry<Integer,AuctionListing> listing: this.auctionList.get(type.toLowerCase()).entrySet()) {
@@ -244,7 +245,7 @@ public class AuctionServer implements IAuctionSystem {
   }
 
   public String getAuctionedItems() throws RemoteException {
-    if (this.auctionList.isEmpty()) return null;
+    if (this.auctionList.isEmpty() || this.auctionList.values().stream().allMatch(Map::isEmpty)) return null;
     String introStr = "\n===== ALL AVAILABLE AUCTIONED ITEMS ======\n";
     String strToStd = introStr;
     for(HashMap.Entry<String, HashMap<Integer, AuctionListing>> listing : this.auctionList.entrySet()) {
