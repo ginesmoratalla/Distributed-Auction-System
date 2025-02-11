@@ -33,7 +33,7 @@ public class AuctionListing implements Serializable {
   public Boolean isAcutionOpen() {
     return this.auctionOpen;
   }
-  
+
   public void changeAuctionStatus(Boolean newStat) {
     this.auctionOpen = newStat;
   }
@@ -47,7 +47,7 @@ public class AuctionListing implements Serializable {
   }
 
   public Float getCurrentPrice() {
-	  return currentPrice;
+    return currentPrice;
   }
 
   public void setCurrentPrice(Float currentPrice) {

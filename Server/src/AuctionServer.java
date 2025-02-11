@@ -156,8 +156,13 @@ public class AuctionServer implements IAuctionSystem {
     for (Map.Entry<Integer,AuctionListing> listing: this.auctionList.get(type.toLowerCase()).entrySet()) {
       list += "ID: " + listing.getKey() + "\n"
            + "Item condition: " + listing.getValue().getItem().getItemCondition() + "\n"
-           + "Minimum price seller is willing to accept: " + listing.getValue().getReservePrice() + " EUR\n"
-           + "Current price: " + listing.getValue().getCurrentPrice() + " EUR\n\n";
+           + "Current price: "  + ((listing
+                                          .getValue()
+                                          .getCurrentPrice()
+                                          .compareTo(listing.getValue().getStartingPrice()) < 0)
+                                              ? listing.getValue().getStartingPrice() : listing.getValue().getCurrentPrice())
+                                + " EUR\n\n";
+           // + "Minimum price seller is willing to accept: " + listing.getValue().getReservePrice() + " EUR\n"
     }
     return list;
   }
