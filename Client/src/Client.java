@@ -23,7 +23,6 @@ public class Client {
 
     Scanner input = new Scanner(System.in);
 
-    // Outer loop in case server connection fails
     while (true) {
 
       try {
@@ -49,6 +48,7 @@ public class Client {
                              + "\n2. Close your auction"
                              + "\n3. Select forward auction mode"
                              + "\n4. Select reverse auction mode"
+                             + "\n5. Select double auction mode"
                              + "\n0. Exit"
                              + "\n");
 
@@ -111,6 +111,10 @@ public class Client {
 
     case 4:
       viewReverseAuction(server, input);
+      return false;
+
+    case 5:
+      viewDoubleAuction(server, input);
       return false;
 
     default:
@@ -240,6 +244,12 @@ public class Client {
       System.out.println("ERROR: Connecting to the server. Try again...");
       return;
     }
+  }
+
+  /*
+   *
+   */
+  public void viewDoubleAuction(IAuctionSystem server, Scanner input) {
   }
 
   public void viewItems(IAuctionSystem server, Scanner input) {

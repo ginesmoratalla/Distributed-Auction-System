@@ -3,7 +3,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-
+import java.util.ArrayList;
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +15,7 @@ import java.util.Random;
 public class AuctionServer implements IAuctionSystem {
 
   private HashMap<String, HashMap<Integer, AuctionListing>> auctionList;
+  private ArrayList<DoubleAuction> doubleAuctionList;
   private static Integer globalId = 0;
 
   private HashMap<Integer, AuctionUser> userList;
@@ -25,6 +26,7 @@ public class AuctionServer implements IAuctionSystem {
   public AuctionServer() {
     super();
     this.auctionList = new HashMap<String, HashMap<Integer, AuctionListing>>();
+    this.doubleAuctionList = new ArrayList<DoubleAuction>();
     this.userList = new HashMap<Integer, AuctionUser>();
     this.userNames = new HashSet<String>();
     this.random = new Random();
@@ -73,7 +75,7 @@ public class AuctionServer implements IAuctionSystem {
       userId = random.nextInt();
     }
     System.out.println("> User " + userName + " got assigned ID " + userId);
-    this.userList.put(userId, new AuctionUser(userName, "NO_PASSWORD_YET"));
+    this.userList.put(userId, new AuctionUser(userId, userName, "NO_PASSWORD_YET"));
     this.userNames.add(userName);
     return userId;
   }
@@ -163,7 +165,6 @@ public class AuctionServer implements IAuctionSystem {
                                           .compareTo(listing.getValue().getStartingPrice()) < 0)
                                               ? listing.getValue().getStartingPrice() : listing.getValue().getCurrentPrice())
                                 + " EUR\n\n";
-           // + "Minimum price seller is willing to accept: " + listing.getValue().getReservePrice() + " EUR\n"
     }
     return list;
   }
