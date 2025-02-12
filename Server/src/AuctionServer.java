@@ -3,11 +3,13 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
+
+
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
 
 // Misc imports
 import java.util.Random;
@@ -15,7 +17,7 @@ import java.util.Random;
 public class AuctionServer implements IAuctionSystem {
 
   private HashMap<String, HashMap<Integer, AuctionListing>> auctionList;
-  private ArrayList<DoubleAuction> doubleAuctionList;
+  private HashMap<String, DoubleAuction> doubleAuctionList;
   private static Integer globalId = 0;
 
   private HashMap<Integer, AuctionUser> userList;
@@ -26,7 +28,7 @@ public class AuctionServer implements IAuctionSystem {
   public AuctionServer() {
     super();
     this.auctionList = new HashMap<String, HashMap<Integer, AuctionListing>>();
-    this.doubleAuctionList = new ArrayList<DoubleAuction>();
+    this.doubleAuctionList = new HashMap<String, DoubleAuction>();
     this.userList = new HashMap<Integer, AuctionUser>();
     this.userNames = new HashSet<String>();
     this.random = new Random();
@@ -78,6 +80,24 @@ public class AuctionServer implements IAuctionSystem {
     this.userList.put(userId, new AuctionUser(userId, userName, "NO_PASSWORD_YET"));
     this.userNames.add(userName);
     return userId;
+  }
+
+  /*
+   * Method for RMI
+   */
+  public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException {
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType, k -> new DoubleAuction());
+    doubleAuciton.addBuyer(this.userList.get(userId), bid);
+  }
+
+  /*
+   * Method for RMI
+   */
+  public void addSellerForDoubleAuction(Integer userId, String itemName, String itemType, String itemDesc, Integer itemCond, Float resPrice, Float startPrice) throws RemoteException {
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType, k -> new DoubleAuction());
+    AuctionItem item = new AuctionItem(assignItemId(), itemName, itemType, itemDesc, itemCond);
+    AuctionListing listing = new AuctionListing(item, startPrice, resPrice);
+    doubleAuciton.addSeller(this.userList.get(userId), listing);
   }
 
   /*

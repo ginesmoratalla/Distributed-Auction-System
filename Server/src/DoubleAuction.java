@@ -1,4 +1,3 @@
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.HashMap;
@@ -7,26 +6,20 @@ import java.util.List;
 
 public class DoubleAuction {
 
-  private final int MAX_USER_COUNT = 3;
   private Integer buyerCount;
   private Integer sellerCount;
   private HashMap<AuctionUser, AuctionListing> listings;
   private HashMap<AuctionUser, Float> userBids;
   private Comparator<Map.Entry<AuctionUser, AuctionListing>> compareBySellerPrice;
 
-  public DoubleAuction() {}
-
-  public void addBidder(AuctionUser user, Float bid) {
-
+  public DoubleAuction() {
     this.compareBySellerPrice = Comparator.comparing(entry -> entry.getValue().getReservePrice());
     this.buyerCount = 0;
     this.sellerCount = 0;
-    this.userBids.put(user, bid);
   }
 
   public Boolean finalizeDoubleAuction() {
-    return (sellerCount == MAX_USER_COUNT &&
-            buyerCount == MAX_USER_COUNT)
+    return (sellerCount > 0 && buyerCount == sellerCount)
         ? true
         : false;
   }
@@ -57,6 +50,13 @@ public class DoubleAuction {
 
   public HashMap<AuctionUser, AuctionListing> getListings() { return this.listings; }
   public HashMap<AuctionUser, Float> getUserBids() { return this.userBids; }
-  public synchronized void addBuyer() {this.buyerCount++;}
-  public synchronized void addSeller() {this.sellerCount++;}
+
+  public synchronized void addBuyer(AuctionUser user, Float bid) {
+    this.userBids.put(user, bid);
+    this.buyerCount++;
+  }
+  public synchronized void addSeller(AuctionUser user, AuctionListing listing) {
+    this.listings.put(user, listing);
+    this.sellerCount++;
+  }
 }
