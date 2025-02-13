@@ -21,6 +21,8 @@ public class DoubleAuction {
   }
 
   public Boolean finalizeDoubleAuction() {
+    System.out.println("> Seller count: " + this.sellerCount);
+    System.out.println("> Buyer count: " + this.buyerCount);
     return (sellerCount > 0 && buyerCount == sellerCount)
         ? true
         : false;
@@ -40,20 +42,24 @@ public class DoubleAuction {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
 
-    System.out.println("[DOUBLE AUCTION INFO]");
-    int i = 0;
-    for (AuctionUser seller: orderedListings) {
-      if(listings.get(seller).getReservePrice() <= userBids.get(orderedBids.get(i))) {
-        listings.get(seller).setCurrentPrice(userBids.get(orderedBids.get(i)));
-        listings.get(seller).setBestBidUser(orderedBids.get(i).getUserName());
-      }
-      System.out.println("> Buyer: "
-                          + "Seller:" + seller.getUserName()
-                          + "Price:" + ((listings.get(seller).getCurrentPrice() > 0.0f)
-                                              ? listings.get(seller).getCurrentPrice() 
-                                              : "Not sold")
-                          + "\n");
-      i++;
+    try {
+      System.out.println("\n[DOUBLE AUCTION INFO]");
+      int i = 0;
+      for (AuctionUser seller: orderedListings) {
+        if(listings.get(seller).getReservePrice() <= userBids.get(orderedBids.get(i))) {
+          listings.get(seller).setCurrentPrice(userBids.get(orderedBids.get(i)));
+          listings.get(seller).setBestBidUser(orderedBids.get(i).getUserName());
+        }
+        System.out.println("> Seller: " + seller.getUserName()
+                            + " | Buyer: " + listings.get(seller).getBestBidUser()
+                            + " | Price: " + ((listings.get(seller).getCurrentPrice() > 0.0f)
+                                                ? listings.get(seller).getCurrentPrice() + " EUR"
+                                                : "Not sold")
+                            + "\n");
+        i++;
+    }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
   }

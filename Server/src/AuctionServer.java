@@ -86,10 +86,10 @@ public class AuctionServer implements IAuctionSystem {
    * Method for RMI
    */
   public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException {
-    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType, k -> new DoubleAuction());
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType.toLowerCase(), k -> new DoubleAuction());
     doubleAuciton.addBuyer(this.userList.get(userId), bid);
 
-    if (this.doubleAuctionList.get(itemType).finalizeDoubleAuction()) {
+    if (this.doubleAuctionList.get(itemType.toLowerCase()).finalizeDoubleAuction()) {
       doubleAuciton.closeDoubleAuction();
       this.doubleAuctionList.remove(itemType);
     }
@@ -99,12 +99,12 @@ public class AuctionServer implements IAuctionSystem {
    * Method for RMI
    */
   public void addSellerForDoubleAuction(Integer userId, String itemName, String itemType, String itemDesc, Integer itemCond, Float resPrice, Float startPrice) throws RemoteException {
-    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType, k -> new DoubleAuction());
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType.toLowerCase(), k -> new DoubleAuction());
     AuctionItem item = new AuctionItem(assignItemId(), itemName, itemType, itemDesc, itemCond);
     AuctionListing listing = new AuctionListing(item, startPrice, resPrice);
     doubleAuciton.addSeller(this.userList.get(userId), listing);
 
-    if (this.doubleAuctionList.get(itemType).finalizeDoubleAuction()) {
+    if (this.doubleAuctionList.get(itemType.toLowerCase()).finalizeDoubleAuction()) {
       doubleAuciton.closeDoubleAuction();
       this.doubleAuctionList.remove(itemType);
     }
