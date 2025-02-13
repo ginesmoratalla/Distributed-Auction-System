@@ -40,4 +40,6 @@ public interface IAuctionSystem extends Remote {
                                         Integer itemCond, Float resPrice,
                                         Float startPrice)
       throws RemoteException;
+
+  public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException;
 }

@@ -24,10 +24,8 @@ public class Client {
     Scanner input = new Scanner(System.in);
 
     while (true) {
-
       try {
         IAuctionSystem server = connectToServer("LZSCC.311 auction server");
-
         System.out.print("\nPlease, type your username: ");
         String uName = null;
         while (true) {
@@ -98,7 +96,7 @@ public class Client {
       return true;
 
     case 1:
-      createAuction(server, input);
+      createAuction(server, input, false);
       return false;
 
     case 2:
@@ -153,7 +151,7 @@ public class Client {
 
   }
 
-  public void createAuction(IAuctionSystem server, Scanner input) {
+  public void createAuction(IAuctionSystem server, Scanner input, Boolean isDoubleAuction) {
 
     System.out.print("\nCreating new auction...\nWhat is the name of your item? ");
     String name = this.inputManager.getStringFromClient(input);
@@ -193,17 +191,26 @@ public class Client {
         + "\nMake sure cent decimals (if any) are separated by a dot: ");
     Float reservePrice = this.inputManager.getFloatFromClient(input);
 
-    System.out.print(
-        "\nSelect a starting price (EUR)."
-        + "\nMake sure cent decimals (if any) are separated by a dot: ");
-    Float startingPrice = this.inputManager.getFloatFromClient(input);
+    Float startingPrice = 0.0f;
+    if (!isDoubleAuction) {
+      System.out.print(
+          "\nSelect a starting price (EUR)."
+          + "\nMake sure cent decimals (if any) are separated by a dot: ");
+      startingPrice = this.inputManager.getFloatFromClient(input);
+    }
 
     try {
-      AuctionListing listing = server.openAuction(this.userId, name, type, description, condition,
-                                      reservePrice, startingPrice);
-      this.userAuctions.put(listing.getItem().getItemId(), listing);
-      System.out.println("\n[AUCTION SUCCESS] Created auction for \"" + name +
-                         "\".\nCorresponding ID: " + listing.getItem().getItemId());
+      if (!isDoubleAuction) {
+        AuctionListing listing = server.openAuction(this.userId, name, type, description, condition,
+                                        reservePrice, startingPrice);
+        this.userAuctions.put(listing.getItem().getItemId(), listing);
+        System.out.println("\n[AUCTION SUCCESS] Created auction for \"" + name +
+                           "\".\nCorresponding ID: " + listing.getItem().getItemId());
+      } else {
+        server.addSellerForDoubleAuction(this.userId, name, type, description, condition,
+                                        reservePrice, startingPrice);
+        System.out.println("\n[DOUBLE AUCTION SUCCESS] Created double auction listing for " + name);
+      }
 
     } catch (Exception e) {
       System.out.println("\nERROR: unable to create auction listing\n");
@@ -247,10 +254,72 @@ public class Client {
   }
 
   /*
+   * Executes an operation from a double auction
+   */
+  public void doubleAuctionOperation (IAuctionSystem server, Scanner input, Integer operation) {
+    try {
+      switch (operation) {
+      case 1:
+        createAuction(server, input, true);
+        break;
+
+      case 2:
+        placeBidDoubleAuction(server, input);
+        break;
+
+      case 0:
+        break;
+      default:
+        System.out.println("\nUnrecognized operation, going back...\n");
+        break;
+      }
+    } catch (Exception e) {
+      System.out.println("ERROR: Error during double auction operation execution");
+    }
+  }
+
+  public void placeBidDoubleAuction(IAuctionSystem server, Scanner input) {
+    String type = null;
+    Float bid = null;
+    try {
+      System.out.println(server.retrieveItemTypes());
+      System.out.print("Select the type of your item among the list: ");
+      while(true) {
+        type = this.inputManager.getStringFromClient(input);
+        if (server.itemTypeExists(type)) {
+          break;
+        }
+        System.out.print("Type does not exist. Try again: ");
+      }
+
+      System.out.print(
+          "\nPlease, type the ammount of money (EUR) of your bid."
+          + "\nNote - decimal cents (if any) must be separated by a dot: ");
+      bid = this.inputManager.getFloatFromClient(input);
+      server.addBuyerForDoubleAuction(this.userId, type, bid);
+      System.out.println("[DOUBLE AUCTION INFO]: Bid placed succesfully.\n");
+
+    } catch (Exception e) {
+      System.out.println("ERROR: Connecting to the server. Try again...");
+      return;
+    }
+  }
+
+  /*
    *
    */
   public void viewDoubleAuction(IAuctionSystem server, Scanner input) {
+    Integer operation = 0;
+    System.out.println("\n--- Double auction operations ---"
+                       + "\n1. Sell an item"
+                       + "\n2. Place a bid"
+                       + "\n0. Return to home"
+                       + "\n");
+    System.out.print("Please, select an operation: ");
+    operation = this.inputManager.getIntegerFromClient(input);
+    doubleAuctionOperation(server, input, operation);
   }
+
 
   public void viewItems(IAuctionSystem server, Scanner input) {
     try {

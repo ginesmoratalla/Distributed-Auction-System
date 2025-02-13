@@ -9,24 +9,13 @@ public class AuctionUser {
     this.password = password;
   }
 
-  public Integer getUserId() {
-    return this.userId;
-  }
+  public Integer getUserId() { return this.userId; }
 
-  public String getUserName() {
-    return this.userName;
-  }
+  public String getUserName() { return this.userName; }
 
-  public void setUserName(String userName) {
-    this.userName = userName;
-  }
+  public void setUserName(String userName) { this.userName = userName; }
 
-  public String getPassword() {
-    return password;
-  }
+  public String getPassword() { return password; }
 
-  public void setPassword(String password) {
-    this.password = password;
-  }
-
+  public void setPassword(String password) { this.password = password; }
 }

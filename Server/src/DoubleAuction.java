@@ -14,6 +14,8 @@ public class DoubleAuction {
 
   public DoubleAuction() {
     this.compareBySellerPrice = Comparator.comparing(entry -> entry.getValue().getReservePrice());
+    this.listings = new HashMap<AuctionUser, AuctionListing>();
+    this.userBids = new HashMap<AuctionUser, Float>();
     this.buyerCount = 0;
     this.sellerCount = 0;
   }
@@ -38,14 +40,22 @@ public class DoubleAuction {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
 
-
+    System.out.println("[DOUBLE AUCTION INFO]");
     int i = 0;
     for (AuctionUser seller: orderedListings) {
       if(listings.get(seller).getReservePrice() <= userBids.get(orderedBids.get(i))) {
         listings.get(seller).setCurrentPrice(userBids.get(orderedBids.get(i)));
+        listings.get(seller).setBestBidUser(orderedBids.get(i).getUserName());
       }
+      System.out.println("> Buyer: "
+                          + "Seller:" + seller.getUserName()
+                          + "Price:" + ((listings.get(seller).getCurrentPrice() > 0.0f)
+                                              ? listings.get(seller).getCurrentPrice() 
+                                              : "Not sold")
+                          + "\n");
       i++;
     }
+
   }
 
   public HashMap<AuctionUser, AuctionListing> getListings() { return this.listings; }
