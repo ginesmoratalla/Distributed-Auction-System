@@ -1,15 +1,22 @@
+
 // RMI
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+// Signature and Security
+import java.security.KeyPairGenerator;
+import java.security.KeyPair;
+import java.security.Signature;
+import java.security.PublicKey;
+import java.security.PrivateKey;
+import java.util.Base64;
 
 // Misc imports
 import java.util.Random;
@@ -23,7 +30,12 @@ public class AuctionServer implements IAuctionSystem {
   private HashMap<Integer, AuctionUser> userList;
   private HashSet<String> userNames;
 
+  private Signature signature;
+  private PrivateKey privateKey;
+  private PublicKey publicKey;
+
   private Random random;
+  private byte[] signatureData = "LZSCC311 Auction Server".getBytes();
 
   public AuctionServer() {
     super();
@@ -32,6 +44,31 @@ public class AuctionServer implements IAuctionSystem {
     this.userList = new HashMap<Integer, AuctionUser>();
     this.userNames = new HashSet<String>();
     this.random = new Random();
+    this.publicKey = KeyManager.loadPublicKey("../keys/auction_rsa.pub");
+    this.privateKey = KeyManager.loadPrivateKey("../keys/auction_rsa");
+
+    try {
+
+      this.signature = Signature.getInstance("SHA256WithDSA");
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("SERVER ERROR: Problem generating the digital signature");
+    }
+  }
+
+  public String signData() throws RemoteException {
+    try {
+      this.signature.initSign(this.privateKey);
+      this.signature.update(this.signatureData);
+      byte[] digitalSignature = this.signature.sign();
+      return Base64.getEncoder().encodeToString(digitalSignature);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("ERROR: signing Data");
+    }
+    return null;
   }
 
   /*
@@ -39,9 +76,7 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Global ID is updated ensuring mutex.
    */
-  private synchronized Integer assignItemId() {
-    return globalId++;
-  }
+  private synchronized Integer assignItemId() { return globalId++; }
 
   /*
    * Adds aucitoned item listing to server's global list
@@ -50,8 +85,8 @@ public class AuctionServer implements IAuctionSystem {
   private AuctionListing addListing(AuctionListing listing) {
     String itemType = listing.getItem().getItemType().toLowerCase();
     this.auctionList
-      .computeIfAbsent(itemType, k -> new HashMap<Integer, AuctionListing>())
-      .put(listing.getItem().getItemId(), listing);
+        .computeIfAbsent(itemType, k -> new HashMap<Integer, AuctionListing>())
+        .put(listing.getItem().getItemId(), listing);
 
     return listing;
   }
@@ -73,11 +108,12 @@ public class AuctionServer implements IAuctionSystem {
    */
   public synchronized Integer addUser(String userName) throws RemoteException {
     Integer userId = random.nextInt(1000);
-    while(this.userList.containsKey(userId)) {
+    while (this.userList.containsKey(userId)) {
       userId = random.nextInt();
     }
     System.out.println("> User " + userName + " got assigned ID " + userId);
-    this.userList.put(userId, new AuctionUser(userId, userName, "NO_PASSWORD_YET"));
+    this.userList.put(userId,
+                      new AuctionUser(userId, userName, "NO_PASSWORD_YET"));
     this.userNames.add(userName);
     return userId;
   }
@@ -85,11 +121,14 @@ public class AuctionServer implements IAuctionSystem {
   /*
    * Method for RMI
    */
-  public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException {
-    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType.toLowerCase(), k -> new DoubleAuction());
+  public void addBuyerForDoubleAuction(Integer userId, String itemType,
+                                       Float bid) throws RemoteException {
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
+        itemType.toLowerCase(), k -> new DoubleAuction());
     doubleAuciton.addBuyer(this.userList.get(userId), bid);
 
-    if (this.doubleAuctionList.get(itemType.toLowerCase()).finalizeDoubleAuction()) {
+    if (this.doubleAuctionList.get(itemType.toLowerCase())
+            .finalizeDoubleAuction()) {
       doubleAuciton.closeDoubleAuction();
       this.doubleAuctionList.remove(itemType);
     }
@@ -98,13 +137,20 @@ public class AuctionServer implements IAuctionSystem {
   /*
    * Method for RMI
    */
-  public void addSellerForDoubleAuction(Integer userId, String itemName, String itemType, String itemDesc, Integer itemCond, Float resPrice, Float startPrice) throws RemoteException {
-    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType.toLowerCase(), k -> new DoubleAuction());
-    AuctionItem item = new AuctionItem(assignItemId(), itemName, itemType, itemDesc, itemCond);
+  public void addSellerForDoubleAuction(Integer userId, String itemName,
+                                        String itemType, String itemDesc,
+                                        Integer itemCond, Float resPrice,
+                                        Float startPrice)
+      throws RemoteException {
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
+        itemType.toLowerCase(), k -> new DoubleAuction());
+    AuctionItem item =
+        new AuctionItem(assignItemId(), itemName, itemType, itemDesc, itemCond);
     AuctionListing listing = new AuctionListing(item, startPrice, resPrice);
     doubleAuciton.addSeller(this.userList.get(userId), listing);
 
-    if (this.doubleAuctionList.get(itemType.toLowerCase()).finalizeDoubleAuction()) {
+    if (this.doubleAuctionList.get(itemType.toLowerCase())
+            .finalizeDoubleAuction()) {
       doubleAuciton.closeDoubleAuction();
       this.doubleAuctionList.remove(itemType);
     }
@@ -115,15 +161,16 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Removes auction listing from server's global list
    */
-  public AuctionListing closeAuction(Integer listingId, String itemType, Integer userId) throws RemoteException {
+  public AuctionListing closeAuction(Integer listingId, String itemType,
+                                     Integer userId) throws RemoteException {
     String itemLowerCase = itemType.toLowerCase();
-    if (this.auctionList.containsKey(itemLowerCase) && this.auctionList.get(itemLowerCase).containsKey(listingId)) {
-      AuctionListing returnListing = this.auctionList.get(itemLowerCase).get(listingId);
+    if (this.auctionList.containsKey(itemLowerCase) &&
+        this.auctionList.get(itemLowerCase).containsKey(listingId)) {
+      AuctionListing returnListing =
+          this.auctionList.get(itemLowerCase).get(listingId);
       this.auctionList.get(itemLowerCase).remove(listingId);
-      System.out.println("> User "
-                        + this.userList.get(userId).getUserName()
-                        + " closed auction with ID: " + listingId
-      );
+      System.out.println("> User " + this.userList.get(userId).getUserName() +
+                         " closed auction with ID: " + listingId);
       return returnListing;
     }
     return null;
@@ -137,7 +184,8 @@ public class AuctionServer implements IAuctionSystem {
   public Boolean itemTypeExists(String typeStr) {
     String lowerCaseString = typeStr.toLowerCase();
     for (AuctionItemTypeEnum type : AuctionItemTypeEnum.values()) {
-      if (type.getValue().toLowerCase().equals(lowerCaseString)) return true;
+      if (type.getValue().toLowerCase().equals(lowerCaseString))
+        return true;
     }
     return false;
   }
@@ -162,16 +210,18 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Create an auction for a given item's details.
    */
-  public AuctionListing openAuction(Integer userId, String itName, String itType, String itDesc, Integer itCond,
-      Float resPrice, Float startPrice) throws RemoteException {
+  public AuctionListing openAuction(Integer userId, String itName,
+                                    String itType, String itDesc,
+                                    Integer itCond, Float resPrice,
+                                    Float startPrice) throws RemoteException {
 
-    AuctionItem item = new AuctionItem(assignItemId(), itName, itType, itDesc, itCond);
-    AuctionListing listing = addListing(new AuctionListing(item, startPrice, resPrice));
-    System.out.println("> User "
-                        + this.userList.get(userId).getUserName()
-                        + " created auction for \""
-                        + itName + "\", id: "
-                        + item.getItemId());
+    AuctionItem item =
+        new AuctionItem(assignItemId(), itName, itType, itDesc, itCond);
+    AuctionListing listing =
+        addListing(new AuctionListing(item, startPrice, resPrice));
+    System.out.println("> User " + this.userList.get(userId).getUserName() +
+                       " created auction for \"" + itName +
+                       "\", id: " + item.getItemId());
     return listing;
   }
 
@@ -182,19 +232,22 @@ public class AuctionServer implements IAuctionSystem {
    * of a specific type.
    */
   public String retrieveItemsByType(String type) throws RemoteException {
-    if (!this.auctionList.containsKey(type.toLowerCase())
-          || this.auctionList.get(type.toLowerCase()).size() == 0) return null;
+    if (!this.auctionList.containsKey(type.toLowerCase()) ||
+        this.auctionList.get(type.toLowerCase()).size() == 0)
+      return null;
 
     String list = "--- All Available " + type + "---\n";
-    for (Map.Entry<Integer,AuctionListing> listing: this.auctionList.get(type.toLowerCase()).entrySet()) {
+    for (Map.Entry<Integer, AuctionListing> listing :
+         this.auctionList.get(type.toLowerCase()).entrySet()) {
       list += "ID: " + listing.getKey() + "\n"
-           + "Item condition: " + listing.getValue().getItem().getItemCondition() + "\n"
-           + "Current price: "  + ((listing
-                                          .getValue()
-                                          .getCurrentPrice()
-                                          .compareTo(listing.getValue().getStartingPrice()) < 0)
-                                              ? listing.getValue().getStartingPrice() : listing.getValue().getCurrentPrice())
-                                + " EUR\n\n";
+              + "Item condition: " +
+              listing.getValue().getItem().getItemCondition() + "\n"
+              + "Current price: " +
+              ((listing.getValue().getCurrentPrice().compareTo(
+                    listing.getValue().getStartingPrice()) < 0)
+                   ? listing.getValue().getStartingPrice()
+                   : listing.getValue().getCurrentPrice()) +
+              " EUR\n\n";
     }
     return list;
   }
@@ -208,7 +261,8 @@ public class AuctionServer implements IAuctionSystem {
       throws RemoteException {
     System.out.println("> User " + clientId + " requested item " + itemId);
 
-    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry : this.auctionList.entrySet()) {
+    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
+         this.auctionList.entrySet()) {
       if (entry.getValue().containsKey(itemId)) {
         System.out.println("> Succesfully retreived item with ID: " + itemId);
         AuctionItem selectedItem = entry.getValue().get(itemId).getItem();
@@ -227,22 +281,24 @@ public class AuctionServer implements IAuctionSystem {
    *
    * @return Boolean; whether the bid was placed succesfully (auction ID exists)
    */
-  public void placeBid(Integer userId, Integer auctionListingId, Float bid) throws RemoteException {
-    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry : this.auctionList.entrySet()) {
-      if(entry.getValue().containsKey(auctionListingId)) {
+  public void placeBid(Integer userId, Integer auctionListingId, Float bid)
+      throws RemoteException {
+    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
+         this.auctionList.entrySet()) {
+      if (entry.getValue().containsKey(auctionListingId)) {
         AuctionListing auctionListing = entry.getValue().get(auctionListingId);
-        auctionListing.appendAuctionLog("[AUCTION LOG] User "
-                + this.userList.get(userId).getUserName()
-                + " placed a bid of " + bid
-                + " EUR.\n");
-        if ((auctionListing.getCurrentPrice() < bid) && (bid >= auctionListing.getStartingPrice())) {
+        auctionListing.appendAuctionLog(
+            "[AUCTION LOG] User " + this.userList.get(userId).getUserName() +
+            " placed a bid of " + bid + " EUR.\n");
+        if ((auctionListing.getCurrentPrice() < bid) &&
+            (bid >= auctionListing.getStartingPrice())) {
           auctionListing.setCurrentPrice(bid);
-          auctionListing.setBestBidUser(this.userList.get(userId).getUserName());
+          auctionListing.setBestBidUser(
+              this.userList.get(userId).getUserName());
         }
-      break;
+        break;
       }
     }
-
   }
 
   /*
@@ -251,8 +307,10 @@ public class AuctionServer implements IAuctionSystem {
    * Checks whether an id is amongst existing auctions.
    */
   public Boolean idMatchesExistingItem(Integer id) throws RemoteException {
-    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry : this.auctionList.entrySet()) {
-      if (entry.getValue().containsKey(id)) return true;
+    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
+         this.auctionList.entrySet()) {
+      if (entry.getValue().containsKey(id))
+        return true;
     }
     return false;
   }
@@ -262,13 +320,17 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Checks if the price prompted by a buyer exceeds the starting price for item
    */
-  public Boolean isBidPriceAcceptable(Integer listingId, Float price) throws RemoteException {
-    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry : this.auctionList.entrySet()) {
+  public Boolean isBidPriceAcceptable(Integer listingId, Float price)
+      throws RemoteException {
+    for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
+         this.auctionList.entrySet()) {
       if (entry.getValue().containsKey(listingId)) {
         if (entry.getValue().get(listingId).getCurrentPrice() > 0.0f) {
-          return entry.getValue().get(listingId).getCurrentPrice().compareTo(price) < 0;
+          return entry.getValue().get(listingId).getCurrentPrice().compareTo(
+                     price) < 0;
         } else {
-          return entry.getValue().get(listingId).getStartingPrice().compareTo(price) <= 0;
+          return entry.getValue().get(listingId).getStartingPrice().compareTo(
+                     price) <= 0;
         }
       }
     }
@@ -276,18 +338,26 @@ public class AuctionServer implements IAuctionSystem {
   }
 
   public String getAuctionedItems() throws RemoteException {
-    if (this.auctionList.isEmpty() || this.auctionList.values().stream().allMatch(Map::isEmpty)) return null;
+    if (this.auctionList.isEmpty() ||
+        this.auctionList.values().stream().allMatch(Map::isEmpty))
+      return null;
     String introStr = "\n===== ALL AVAILABLE AUCTIONED ITEMS ======\n";
     String strToStd = introStr;
-    for(HashMap.Entry<String, HashMap<Integer, AuctionListing>> listing : this.auctionList.entrySet()) {
-      for(HashMap.Entry<Integer, AuctionListing> entry : this.auctionList.get(listing.getKey()).entrySet()) {
+    for (HashMap.Entry<String, HashMap<Integer, AuctionListing>> listing :
+         this.auctionList.entrySet()) {
+      for (HashMap.Entry<Integer, AuctionListing> entry :
+           this.auctionList.get(listing.getKey()).entrySet()) {
 
-        strToStd += "ID: " + entry.getValue().getItem().getItemId()
-                  + " || item: " + entry.getValue().getItem().getItemTitle()
-                  + " || starting price: " + entry.getValue().getStartingPrice() + " EUR"
-                  + " || current best bid: "
-                  + ((entry.getValue().getCurrentPrice() == 0.0f) ? "No best bid yet" : entry.getValue().getCurrentPrice())
-                  + "\n";
+        strToStd +=
+            "ID: " + entry.getValue().getItem().getItemId() +
+            " || item: " + entry.getValue().getItem().getItemTitle() +
+            " || starting price: " + entry.getValue().getStartingPrice() +
+            " EUR"
+            + " || current best bid: " +
+            ((entry.getValue().getCurrentPrice() == 0.0f)
+                 ? "No best bid yet"
+                 : entry.getValue().getCurrentPrice()) +
+            "\n";
       }
     }
     strToStd += "=".repeat(introStr.length() - 2) + "\n";
@@ -301,7 +371,8 @@ public class AuctionServer implements IAuctionSystem {
     try {
       AuctionServer s = new AuctionServer();
       String name = "LZSCC.311 auction server";
-      IAuctionSystem remoteObject = (IAuctionSystem) UnicastRemoteObject.exportObject(s, 0);
+      IAuctionSystem remoteObject =
+          (IAuctionSystem)UnicastRemoteObject.exportObject(s, 0);
       Registry registry = LocateRegistry.getRegistry();
       registry.rebind(name, remoteObject);
 

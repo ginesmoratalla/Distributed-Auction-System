@@ -1,5 +1,5 @@
 import java.util.Comparator;
-import java.util.stream.Collectors;
+// import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -34,16 +34,18 @@ public class DoubleAuction {
                     .stream()
                     .sorted(compareBySellerPrice.reversed())
                     .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
+                    .toList();
 
     List<AuctionUser> orderedBids = this.userBids.entrySet()
                     .stream()
-                    .sorted(Comparator.comparing(entry -> entry.getValue()))
+                    .sorted(Comparator.comparing(Map.Entry::getValue))
                     .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
+                    .toList();
 
     try {
       System.out.println("\n[DOUBLE AUCTION INFO]");
+      System.out.println("+ Listings " + listings.size());
+      System.out.println("+ Bids " + userBids.size());
       int i = 0;
       for (AuctionUser seller: orderedListings) {
         if(listings.get(seller).getReservePrice() <= userBids.get(orderedBids.get(i))) {
@@ -53,8 +55,8 @@ public class DoubleAuction {
         System.out.println("> Seller: " + seller.getUserName()
                             + " | Buyer: " + listings.get(seller).getBestBidUser()
                             + " | Price: " + ((listings.get(seller).getCurrentPrice() > 0.0f)
-                                                ? listings.get(seller).getCurrentPrice() + " EUR"
-                                                : "Not sold")
+                                      ? listings.get(seller).getCurrentPrice() + " EUR"
+                                      : "Not sold")
                             + "\n");
         i++;
     }
