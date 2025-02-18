@@ -42,4 +42,5 @@ public interface IAuctionSystem extends Remote {
       throws RemoteException;
 
   public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException;
+  public byte[] signData(byte[] encryptedSignature, String originalMessage, Integer userId) throws RemoteException;
 }

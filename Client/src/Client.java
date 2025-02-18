@@ -1,10 +1,15 @@
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+
+import javax.crypto.Cipher;
+
 
 public class Client {
 
@@ -12,12 +17,16 @@ public class Client {
   private final Integer userId;
   private HashMap<Integer, AuctionListing> userAuctions;
   private ClientInputManager inputManager;
+  private PublicKey serverPublicKey;
+  private KeyPair clientKeyPair;
 
   public Client(String userName, Integer userId) {
     this.userName = userName;
     this.userId = userId;
     this.userAuctions = new HashMap<Integer, AuctionListing>();
     this.inputManager = new ClientInputManager();
+    this.serverPublicKey = KeyManager.loadPublicKey("../keys/server_auction_rsa.pub");
+    this.clientKeyPair = KeyManager.generateRSAKeys();
   }
 
   public static void main(String[] args) {
@@ -35,9 +44,9 @@ public class Client {
             break;
           System.out.print("\nUsername already in use, try another username: ");
         }
-
         System.out.println("Logging in...");
         Client user = new Client(uName, server.addUser(uName));
+        verifyServerSignature(server, user.userName, user.clientKeyPair, user.serverPublicKey, user.userId);
 
         // Main client Loop
         Integer operation = 0;
@@ -72,15 +81,78 @@ public class Client {
   public static IAuctionSystem connectToServer(String name)
       throws RemoteException {
     try {
+
       Registry registry = LocateRegistry.getRegistry("localhost");
       IAuctionSystem stub = (IAuctionSystem) registry.lookup(name);
       System.out.println("Connected to server \"" + name + "\"");
+
+
       return stub;
     } catch (Exception e) {
       System.err.println("Exception:");
       e.printStackTrace();
     }
     return null;
+  }
+
+  /*
+   *
+   */
+  private static Boolean verifyServerSignature(IAuctionSystem stub, String userName,
+        KeyPair userKeyPair, PublicKey serverPubKey, Integer userId) {
+
+    System.out.println("Verifying server identity...");
+    String verificationMessage = "User " + userName + " verification";
+    Signature signature;
+    Cipher cipher;
+    byte[] digitalSignature;
+    byte[] encryptedSignature;
+    byte[] serverSignedData;
+
+    // Sign message with user's private key
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initSign(userKeyPair.getPrivate());
+      signature.update(verificationMessage.getBytes());
+      digitalSignature = signature.sign();
+
+    } catch (Exception e) {
+      System.out.println("ERROR: Problem generating the digital signature Instance");
+      return false;
+    }
+    // Encrypt client signature with server pub key
+    try {
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
+      encryptedSignature = cipher.doFinal(digitalSignature);
+
+    } catch (Exception e) {
+      System.out.println("ERROR: Problem encrypting message with server's public key");
+      return false;
+    }
+    // Get verification + ack signature from server
+    try {
+      serverSignedData = stub.signData(encryptedSignature, verificationMessage, userId);
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.DECRYPT_MODE, userKeyPair.getPrivate());
+      serverSignedData = cipher.doFinal(serverSignedData);
+    } catch (Exception e) {
+      System.out.println("ERROR: Retrieving server signature");
+      return false;
+    }
+    // Verify signature from server
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initVerify(serverPubKey);
+      signature.update(verificationMessage.getBytes());
+      if (!signature.verify(serverSignedData)) return false;
+      System.out.println("Server signature verification complete!");
+
+    } catch (Exception e) {
+      System.out.println("ERROR: Verifying server signature");
+      return false;
+    }
+    return true;
   }
 
   /*

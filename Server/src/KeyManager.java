@@ -1,6 +1,4 @@
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -9,35 +7,37 @@ import java.security.PublicKey;
 
 public class KeyManager {
 
-  public static void generateRSAKeys() {
+  public static KeyPair generateRSAKeys() {
     try {
       KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
       keyPairGenerator.initialize(2048);
       KeyPair keyPair = keyPairGenerator.generateKeyPair();
-      PrivateKey privateKey = keyPair.getPrivate();
-      PublicKey publicKey = keyPair.getPublic();
+      // PrivateKey privateKey = keyPair.getPrivate();
+      // PublicKey publicKey = keyPair.getPublic();
 
       // private key
-      try (ObjectOutputStream privateKeyStream =
-               new ObjectOutputStream(new FileOutputStream("auction_rsa"))) {
+      // try (ObjectOutputStream privateKeyStream =
+      //          new ObjectOutputStream(new FileOutputStream("auction_rsa"))) {
 
-        privateKeyStream.writeObject(privateKey);
-      }
+      //   privateKeyStream.writeObject(privateKey);
+      // }
 
       // public key
-      try (ObjectOutputStream publicKeyStream = new ObjectOutputStream(
-               new FileOutputStream("auction_rsa.pub"))) {
+      // try (ObjectOutputStream publicKeyStream = new ObjectOutputStream(
+      //          new FileOutputStream("auction_rsa.pub"))) {
 
-        publicKeyStream.writeObject(publicKey);
-      }
+      //   publicKeyStream.writeObject(publicKey);
+      // }
 
-      System.out.println("Keys have been saved successfully.");
+      System.out.println("Keys have been generated successfully.");
+      return keyPair;
 
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println(
-          "[ERROR]: Problem generating the digital signature");
+          "[ERROR]: Problem generating the rsa key-pair");
     }
+    return null;
   }
 
   public static PrivateKey loadPrivateKey(String dir) {

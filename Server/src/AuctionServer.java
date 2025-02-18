@@ -16,6 +16,7 @@ import java.security.KeyPair;
 import java.security.Signature;
 import java.security.PublicKey;
 import java.security.PrivateKey;
+import javax.crypto.Cipher;
 import java.util.Base64;
 
 // Misc imports
@@ -30,12 +31,10 @@ public class AuctionServer implements IAuctionSystem {
   private HashMap<Integer, AuctionUser> userList;
   private HashSet<String> userNames;
 
-  private Signature signature;
   private PrivateKey privateKey;
   private PublicKey publicKey;
 
   private Random random;
-  private byte[] signatureData = "LZSCC311 Auction Server".getBytes();
 
   public AuctionServer() {
     super();
@@ -44,31 +43,68 @@ public class AuctionServer implements IAuctionSystem {
     this.userList = new HashMap<Integer, AuctionUser>();
     this.userNames = new HashSet<String>();
     this.random = new Random();
-    this.publicKey = KeyManager.loadPublicKey("../keys/auction_rsa.pub");
-    this.privateKey = KeyManager.loadPrivateKey("../keys/auction_rsa");
-
-    try {
-
-      this.signature = Signature.getInstance("SHA256WithDSA");
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("SERVER ERROR: Problem generating the digital signature");
-    }
+    this.publicKey = KeyManager.loadPublicKey("../keys/server_auction_rsa.pub");
+    this.privateKey = KeyManager.loadPrivateKey("../keys/server_auction_rsa");
   }
 
-  public String signData() throws RemoteException {
+  /*
+   * Method for RMI
+   *
+   * Creates Digital Signature
+   *
+   */
+  public synchronized byte[] signData(byte[] encryptedSignature,
+    String originalMessage, Integer userId) throws RemoteException {
+
+    Cipher cipher;
+    Signature signature;
+    AuctionUser user = this.userList.get(userId);
+    byte[] decryptedSignature;
+    byte[] serverReturnSignature;
+
+    // Decrypt encrypted signature given by user
     try {
-      this.signature.initSign(this.privateKey);
-      this.signature.update(this.signatureData);
-      byte[] digitalSignature = this.signature.sign();
-      return Base64.getEncoder().encodeToString(digitalSignature);
+      signature = Signature.getInstance("SHA256WithRSA");
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.DECRYPT_MODE, this.privateKey);
+      decryptedSignature = cipher.doFinal(encryptedSignature);
 
     } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("ERROR: signing Data");
+      System.out.println("ERROR: Problem decrypting signature with server's private key");
+      return null;
     }
-    return null;
+    // Check whether message has not been tampered with
+    try {
+      signature.initVerify(user.getPublicKey());
+      signature.update(originalMessage.getBytes());
+      if (!signature.verify(decryptedSignature)) return null;
+
+    } catch (Exception e) {
+      System.out.println("ERROR: signing Data");
+      return null;
+    }
+    // Create server signature
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initSign(this.privateKey);
+      signature.update(originalMessage.getBytes());
+      serverReturnSignature = signature.sign();
+      System.out.println("> Client verification complete for user: " + user.getUserName());
+    } catch (Exception e) {
+      System.out.println("ERROR: Problem generating server signature");
+      return null;
+    }
+    // Encrypt signature with client's pub key 
+    try {
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.ENCRYPT_MODE, user.getPublicKey());
+      serverReturnSignature = cipher.doFinal(serverReturnSignature);
+
+    } catch (Exception e) {
+      System.out.println("ERROR: Problem encrypting server signature with user's public key");
+      return null;
+    }
+    return serverReturnSignature;
   }
 
   /*
