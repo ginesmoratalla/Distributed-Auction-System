@@ -1,5 +1,6 @@
 
 // RMI
+import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -11,13 +12,14 @@ import java.util.HashSet;
 import java.util.Map;
 
 // Signature and Security
-import java.security.KeyPairGenerator;
-import java.security.KeyPair;
+import java.security.KeyFactory;
 import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
 import java.security.PublicKey;
 import java.security.PrivateKey;
 import javax.crypto.Cipher;
-import java.util.Base64;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 // Misc imports
 import java.util.Random;
@@ -53,7 +55,7 @@ public class AuctionServer implements IAuctionSystem {
    * Creates Digital Signature
    *
    */
-  public synchronized byte[] signData(byte[] encryptedSignature,
+  public synchronized byte[] signData(byte[] encryptedAES, byte[] encryptedSignature,
     String originalMessage, Integer userId) throws RemoteException {
 
     Cipher cipher;
@@ -61,24 +63,35 @@ public class AuctionServer implements IAuctionSystem {
     AuctionUser user = this.userList.get(userId);
     byte[] decryptedSignature;
     byte[] serverReturnSignature;
+    SecretKey aesKey;
+
+    // Decrypt encrypted AES key
+    try {
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.DECRYPT_MODE, this.privateKey);
+      aesKey = new SecretKeySpec(cipher.doFinal(encryptedAES), "AES");
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("ERROR: Problem decrypting AES key with server's private RSA key");
+      return null;
+    }
 
     // Decrypt encrypted signature given by user
     try {
-      signature = Signature.getInstance("SHA256WithRSA");
-      cipher = Cipher.getInstance("RSA");
-      cipher.init(Cipher.DECRYPT_MODE, this.privateKey);
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.DECRYPT_MODE, aesKey);
       decryptedSignature = cipher.doFinal(encryptedSignature);
-
     } catch (Exception e) {
+      e.printStackTrace();
       System.out.println("ERROR: Problem decrypting signature with server's private key");
       return null;
     }
     // Check whether message has not been tampered with
     try {
+      signature = Signature.getInstance("SHA256WithRSA");
       signature.initVerify(user.getPublicKey());
-      signature.update(originalMessage.getBytes());
-      if (!signature.verify(decryptedSignature)) return null;
-
+      signature.update(originalMessage.getBytes(StandardCharsets.UTF_8));
+      if (!signature.verify(decryptedSignature)) throw new Exception("ERROR: Verifying Client Signature");
     } catch (Exception e) {
       System.out.println("ERROR: signing Data");
       return null;
@@ -87,19 +100,18 @@ public class AuctionServer implements IAuctionSystem {
     try {
       signature = Signature.getInstance("SHA256WithRSA");
       signature.initSign(this.privateKey);
-      signature.update(originalMessage.getBytes());
+      signature.update(originalMessage.getBytes(StandardCharsets.UTF_8));
       serverReturnSignature = signature.sign();
       System.out.println("> Client verification complete for user: " + user.getUserName());
     } catch (Exception e) {
       System.out.println("ERROR: Problem generating server signature");
       return null;
     }
-    // Encrypt signature with client's pub key 
+    // Encrypt signature with client's pub key
     try {
-      cipher = Cipher.getInstance("RSA");
-      cipher.init(Cipher.ENCRYPT_MODE, user.getPublicKey());
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.ENCRYPT_MODE, aesKey);
       serverReturnSignature = cipher.doFinal(serverReturnSignature);
-
     } catch (Exception e) {
       System.out.println("ERROR: Problem encrypting server signature with user's public key");
       return null;
@@ -142,15 +154,22 @@ public class AuctionServer implements IAuctionSystem {
    * Creates and adds user ID to server's user list.
    * User random ID is created ensuring mutex.
    */
-  public synchronized Integer addUser(String userName) throws RemoteException {
+  public synchronized Integer addUser(String userName, byte[] userPublicKeyEncoded) throws RemoteException {
     Integer userId = random.nextInt(1000);
     while (this.userList.containsKey(userId)) {
       userId = random.nextInt();
     }
-    System.out.println("> User " + userName + " got assigned ID " + userId);
-    this.userList.put(userId,
-                      new AuctionUser(userId, userName, "NO_PASSWORD_YET"));
-    this.userNames.add(userName);
+    PublicKey userPublicKey;
+    try {
+      System.out.println("> User " + userName + " got assigned ID " + userId);
+      userPublicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(userPublicKeyEncoded));
+      this.userList.put(userId,
+                        new AuctionUser(userId, userName, "NO_PASSWORD_YET", userPublicKey));
+      this.userNames.add(userName);
+    } catch (Exception e) {
+      System.out.println("ERROR: Deserializing user public key.");
+    }
+
     return userId;
   }
 

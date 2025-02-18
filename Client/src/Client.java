@@ -1,3 +1,4 @@
+import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -7,8 +8,9 @@ import java.security.Signature;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.KeyGenerator;
 
 
 public class Client {
@@ -18,7 +20,7 @@ public class Client {
   private HashMap<Integer, AuctionListing> userAuctions;
   private ClientInputManager inputManager;
   private PublicKey serverPublicKey;
-  private KeyPair clientKeyPair;
+  private static KeyPair clientKeyPair = KeyManager.generateRSAKeys();
 
   public Client(String userName, Integer userId) {
     this.userName = userName;
@@ -26,7 +28,6 @@ public class Client {
     this.userAuctions = new HashMap<Integer, AuctionListing>();
     this.inputManager = new ClientInputManager();
     this.serverPublicKey = KeyManager.loadPublicKey("../keys/server_auction_rsa.pub");
-    this.clientKeyPair = KeyManager.generateRSAKeys();
   }
 
   public static void main(String[] args) {
@@ -45,8 +46,8 @@ public class Client {
           System.out.print("\nUsername already in use, try another username: ");
         }
         System.out.println("Logging in...");
-        Client user = new Client(uName, server.addUser(uName));
-        verifyServerSignature(server, user.userName, user.clientKeyPair, user.serverPublicKey, user.userId);
+        Client user = new Client(uName, server.addUser(uName, clientKeyPair.getPublic().getEncoded()));
+        verifyServerSignature(server, user.userName, clientKeyPair, user.serverPublicKey, user.userId);
 
         // Main client Loop
         Integer operation = 0;
@@ -102,52 +103,69 @@ public class Client {
         KeyPair userKeyPair, PublicKey serverPubKey, Integer userId) {
 
     System.out.println("Verifying server identity...");
-    String verificationMessage = "User " + userName + " verification";
+    String verificationMessage = userName;
     Signature signature;
     Cipher cipher;
     byte[] digitalSignature;
     byte[] encryptedSignature;
     byte[] serverSignedData;
+    byte[] encryptedAES;
+    SecretKey aesKey;
 
+    // Generate AES key
+    try {
+      KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+      keyGenerator.init(256);
+      aesKey = keyGenerator.generateKey();
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("ERROR: Generating AES key for encryption");
+      return false;
+    }
     // Sign message with user's private key
     try {
       signature = Signature.getInstance("SHA256WithRSA");
       signature.initSign(userKeyPair.getPrivate());
-      signature.update(verificationMessage.getBytes());
+      signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
       digitalSignature = signature.sign();
-
     } catch (Exception e) {
-      System.out.println("ERROR: Problem generating the digital signature Instance");
+      e.printStackTrace();
+      System.out.println("ERROR: Problem generating digital signature with user's public RSA");
       return false;
     }
-    // Encrypt client signature with server pub key
     try {
-      cipher = Cipher.getInstance("RSA");
-      cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
+      // Encrypt client signature with AES Key
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.ENCRYPT_MODE, aesKey);
       encryptedSignature = cipher.doFinal(digitalSignature);
 
+      // Encrypt AES key with servers public RSA
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
+      encryptedAES = cipher.doFinal(aesKey.getEncoded());
+
     } catch (Exception e) {
-      System.out.println("ERROR: Problem encrypting message with server's public key");
+      e.printStackTrace();
+      System.out.println("ERROR: Problem encrypting signature");
       return false;
     }
     // Get verification + ack signature from server
     try {
-      serverSignedData = stub.signData(encryptedSignature, verificationMessage, userId);
-      cipher = Cipher.getInstance("RSA");
-      cipher.init(Cipher.DECRYPT_MODE, userKeyPair.getPrivate());
+      serverSignedData = stub.signData(encryptedAES, encryptedSignature, verificationMessage, userId);
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.DECRYPT_MODE, aesKey);
       serverSignedData = cipher.doFinal(serverSignedData);
     } catch (Exception e) {
       System.out.println("ERROR: Retrieving server signature");
       return false;
     }
-    // Verify signature from server
+    // Verify validity of the signature from server
     try {
       signature = Signature.getInstance("SHA256WithRSA");
       signature.initVerify(serverPubKey);
-      signature.update(verificationMessage.getBytes());
+      signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
       if (!signature.verify(serverSignedData)) return false;
       System.out.println("Server signature verification complete!");
-
     } catch (Exception e) {
       System.out.println("ERROR: Verifying server signature");
       return false;

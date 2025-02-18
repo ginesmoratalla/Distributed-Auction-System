@@ -28,8 +28,7 @@ public class KeyManager {
 
       //   publicKeyStream.writeObject(publicKey);
       // }
-
-      System.out.println("Keys have been generated successfully.");
+      System.out.println("> Keys have been generated successfully.");
       return keyPair;
 
     } catch (Exception e) {
@@ -44,12 +43,12 @@ public class KeyManager {
     PrivateKey privK = null;
     try (ObjectInputStream privateKeyStream =
              new ObjectInputStream(new FileInputStream(dir))) {
+
       privK = (PrivateKey) privateKeyStream.readObject();
+      System.out.println("> Server Private Key Loaded Succesfully");
     } catch (Exception e) {
       e.printStackTrace();
     }
-
-    System.out.println("Private Key Loaded Succesfully");
     return privK;
   }
 
@@ -57,11 +56,12 @@ public class KeyManager {
     PublicKey pubK = null;
     try (ObjectInputStream publicKeyStream =
              new ObjectInputStream(new FileInputStream(dir))) {
+
       pubK = (PublicKey) publicKeyStream.readObject();
+      System.out.println("> Server Public Key Loaded Succesfully");
     } catch (Exception e) {
       e.printStackTrace();
     }
-    System.out.println("Public Key Loaded Succesfully");
     return pubK;
   }
 }
