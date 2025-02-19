@@ -14,7 +14,8 @@ public interface IAuctionSystem extends Remote {
   public AuctionItem getSpec(Integer itemId, String clientId)
       throws RemoteException;
 
-  public Integer addUser(String userName, byte[] userPublicKey) throws RemoteException;
+  public Integer addUser(String userName, byte[] userPublicKey)
+      throws RemoteException;
 
   public void placeBid(Integer userId, Integer auctionListingId, Float bid)
       throws RemoteException;
@@ -41,6 +42,12 @@ public interface IAuctionSystem extends Remote {
                                         Float startPrice)
       throws RemoteException;
 
-  public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException;
-  public byte[] signData(byte[] encryptedAES, byte[] encryptedSignature, String originalMessage, Integer userId) throws RemoteException;
+  public void addBuyerForDoubleAuction(Integer userId, String itemType,
+                                       Float bid) throws RemoteException;
+
+  public byte[] verifyClientSignature(byte[] encryptedAES,
+                                      byte[] encryptedSignature,
+                                      String originalMessage, Integer userId,
+                                      String originalSignatureHashDigest)
+      throws RemoteException;
 }
