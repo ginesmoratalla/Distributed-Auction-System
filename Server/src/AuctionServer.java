@@ -8,6 +8,7 @@ import java.rmi.server.UnicastRemoteObject;
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 // Signature and Security
@@ -57,7 +58,7 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Hybrid encripyion -> symmetric AES key + asymmetric RSA signature.
    */
-  public synchronized byte[] verifyClientSignature(byte[] encryptedAES, byte[] encryptedSignature,
+  public synchronized List<byte[]> verifyClientSignature(byte[] encryptedAES, byte[] encryptedSignature,
     String originalMessage, Integer userId, String originalSignatureHashDigest) throws RemoteException {
 
     CryptoManager cryptoManager = new CryptoManager();
@@ -66,6 +67,7 @@ public class AuctionServer implements IAuctionSystem {
     AuctionUser user = this.userList.get(userId);
     byte[] decryptedSignature;
     byte[] serverReturnSignature;
+    byte[] serverSignatureHashDigest;
     SecretKey aesKey;
 
     // Decrypt encrypted AES key with server's private RSA key
@@ -97,12 +99,13 @@ public class AuctionServer implements IAuctionSystem {
       if (!signature.verify(decryptedSignature))
         throw new Exception("[USER SIGNATURE VERIFICATION ERROR]: Wrong Client Signature");
 
-      System.out.println("[USER SIGNATURE VERIFICATION SUCCESS] Client verification complete for user: " + user.getUserName());
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       md.update(decryptedSignature);
-      String returnHashDigest = cryptoManager.byteArrayToHex(md.digest());
-      System.out.println("[USER SIGNATURE VERIFICATION SUCCESS] Decrypted signature's hash digest: " + returnHashDigest);
-      System.out.println("[USER SIGNATURE VERIFICATION SUCCESS] Original signature's hash digest: " + originalSignatureHashDigest);
+      String decryptedSignatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
+
+      System.out.println("\n[USER SIGNATURE VERIFICATION SUCCESS] Client verification complete for user: " + user.getUserName());
+      System.out.println("+ Decrypted signature's hash digest: " + decryptedSignatureHashDigest);
+      System.out.println("+ Original signature's hash digest: " + originalSignatureHashDigest + "\n");
 
     } catch (Exception e) {
       System.out.println("[SIGNATURE VERIFICATION ERROR]: Error verifying user signature");
@@ -120,6 +123,11 @@ public class AuctionServer implements IAuctionSystem {
     }
     // Encrypt server signature with AES Key
     try {
+      // Hash digest of server signature (pre-AES encryption)
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      md.update(serverReturnSignature);
+      serverSignatureHashDigest = md.digest();
+
       cipher = Cipher.getInstance("AES");
       cipher.init(Cipher.ENCRYPT_MODE, aesKey);
       serverReturnSignature = cipher.doFinal(serverReturnSignature);
@@ -127,7 +135,7 @@ public class AuctionServer implements IAuctionSystem {
       System.out.println("[SERVER SIGNATURE ENCRYPTION ERROR]: Problem encrypting server signature with AES Key");
       return null;
     }
-    return serverReturnSignature;
+    return List.of(serverReturnSignature, serverSignatureHashDigest);
   }
   /*
    * Adds item to server's global list
@@ -441,7 +449,7 @@ public class AuctionServer implements IAuctionSystem {
       Registry registry = LocateRegistry.getRegistry();
       registry.rebind(name, remoteObject);
 
-      System.out.println("Server ready");
+      System.out.println("> Server ready");
 
     } catch (Exception e) {
       e.printStackTrace();

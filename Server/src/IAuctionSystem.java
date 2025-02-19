@@ -1,4 +1,5 @@
 import java.rmi.Remote;
+import java.util.List;
 import java.rmi.RemoteException;
 
 public interface IAuctionSystem extends Remote {
@@ -45,7 +46,7 @@ public interface IAuctionSystem extends Remote {
   public void addBuyerForDoubleAuction(Integer userId, String itemType,
                                        Float bid) throws RemoteException;
 
-  public byte[] verifyClientSignature(byte[] encryptedAES,
+  public List<byte[]> verifyClientSignature(byte[] encryptedAES,
                                       byte[] encryptedSignature,
                                       String originalMessage, Integer userId,
                                       String originalSignatureHashDigest)

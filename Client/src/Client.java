@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 
 // Misc imports
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -117,8 +118,9 @@ public class Client {
     Cipher cipher;
     byte[] digitalSignature;
     byte[] encryptedSignature;
-    byte[] serverSignedData;
+    List<byte[]> serverSignatureReturn;
     byte[] encryptedAES;
+    byte[] serverSignature;
     SecretKey aesKey;
 
     // Generate AES key (one-time use, only valid for this handshake)
@@ -161,13 +163,21 @@ public class Client {
     }
     // Get verification + ack signature from server
     try {
+      // Hash digest of the signature (signature pre-AES encryption)
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       md.update(digitalSignature);
       String signatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
-      serverSignedData = stub.verifyClientSignature(encryptedAES, encryptedSignature, verificationMessage, userId, signatureHashDigest);
+
+      serverSignatureReturn = stub.verifyClientSignature(
+        encryptedAES,
+        encryptedSignature,
+        verificationMessage,
+        userId,
+        signatureHashDigest);
+
       cipher = Cipher.getInstance("AES");
       cipher.init(Cipher.DECRYPT_MODE, aesKey);
-      serverSignedData = cipher.doFinal(serverSignedData);
+      serverSignature = cipher.doFinal(serverSignatureReturn.get(0));
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("[SECURITY ERROR]: Retrieving server signature");
@@ -178,8 +188,15 @@ public class Client {
       signature = Signature.getInstance("SHA256WithRSA");
       signature.initVerify(serverPubKey);
       signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
-      if (!signature.verify(serverSignedData)) return false;
-      System.out.println("Server signature verification complete!");
+      if (!signature.verify(serverSignature)) return false;
+
+      // Show verification on stdout
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      md.update(serverSignature);
+      String returnHashDigest = cryptoManager.byteArrayToHex(md.digest());
+      System.out.println("\n[SERVER SIGNATURE VERIFICATION SUCCESS] Server signature verification complete\n");
+      System.out.println("+ Decrypted server's signature's hash digest: " + returnHashDigest);
+      System.out.println("+ Original server's signature's hash digest: " + cryptoManager.byteArrayToHex(serverSignatureReturn.get(1)) + "\n");
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("[SECURITY ERROR]: Verifying server signature");
