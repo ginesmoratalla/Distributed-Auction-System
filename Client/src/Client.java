@@ -104,106 +104,6 @@ public class Client {
     return null;
   }
 
-  /*
-   * Two-way digital signature handshake to verify server's identity.
-   * Hybrid encripyion -> symmetric AES key + asymmetric RSA signature.
-   */
-  private static Boolean verifyServerSignature(IAuctionSystem stub, String userName,
-        KeyPair userKeyPair, PublicKey serverPubKey, Integer userId) {
-
-    System.out.println("[SECURITY] Verifying server identity...");
-    String verificationMessage = userName;
-    Signature signature;
-    CryptoManager cryptoManager = new CryptoManager();
-    Cipher cipher;
-    byte[] digitalSignature;
-    byte[] encryptedSignature;
-    List<byte[]> serverSignatureReturn;
-    byte[] encryptedAES;
-    byte[] serverSignature;
-    SecretKey aesKey;
-
-    // Generate AES key (one-time use, only valid for this handshake)
-    try {
-      KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-      keyGenerator.init(256);
-      aesKey = keyGenerator.generateKey();
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[SECURITY ERROR]: Generating AES key for encryption");
-      return false;
-    }
-    // Sign message with user's private RSA key
-    try {
-      signature = Signature.getInstance("SHA256WithRSA");
-      signature.initSign(userKeyPair.getPrivate());
-      signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
-      digitalSignature = signature.sign();
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[SECURITY ERROR]: Problem " +
-        "generating digital signature with user's private RSA");
-      return false;
-    }
-    // Encrypt signature (hybrid encryption)
-    try {
-      // Encrypt signed message with AES Key
-      cipher = Cipher.getInstance("AES");
-      cipher.init(Cipher.ENCRYPT_MODE, aesKey);
-      encryptedSignature = cipher.doFinal(digitalSignature);
-
-      // Encrypt AES key with server's public RSA
-      cipher = Cipher.getInstance("RSA");
-      cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
-      encryptedAES = cipher.doFinal(aesKey.getEncoded());
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[SECURITY ERROR]: Problem encrypting signature or AES key");
-      return false;
-    }
-    // Get verification + ack signature from server
-    try {
-      // Hash digest of the signature (signature pre-AES encryption)
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      md.update(digitalSignature);
-      String signatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
-
-      serverSignatureReturn = stub.verifyClientSignature(
-        encryptedAES,
-        encryptedSignature,
-        verificationMessage,
-        userId,
-        signatureHashDigest);
-
-      cipher = Cipher.getInstance("AES");
-      cipher.init(Cipher.DECRYPT_MODE, aesKey);
-      serverSignature = cipher.doFinal(serverSignatureReturn.get(0));
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[SECURITY ERROR]: Retrieving server signature");
-      return false;
-    }
-    // Verify validity of the signature from server
-    try {
-      signature = Signature.getInstance("SHA256WithRSA");
-      signature.initVerify(serverPubKey);
-      signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
-      if (!signature.verify(serverSignature)) return false;
-
-      // Show verification on stdout
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      md.update(serverSignature);
-      String returnHashDigest = cryptoManager.byteArrayToHex(md.digest());
-      System.out.println("\n[SERVER SIGNATURE VERIFICATION SUCCESS] Server signature verification complete\n");
-      System.out.println("+ Decrypted server's signature's hash digest: " + returnHashDigest);
-      System.out.println("+ Original server's signature's hash digest: " + cryptoManager.byteArrayToHex(serverSignatureReturn.get(1)) + "\n");
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[SECURITY ERROR]: Verifying server signature");
-      return false;
-    }
-    return true;
-  }
 
   /*
    * Executes the function logic corresponding to the user's selected
@@ -601,5 +501,106 @@ public class Client {
       System.out.println("ID: " + entry.getKey() +
                          " | item: " + entry.getValue().getItem().getItemTitle());
     }
+  }
+
+  /*
+   * Two-way digital signature handshake to verify server's identity.
+   * Hybrid encripyion -> symmetric AES key + asymmetric RSA signature.
+   */
+  private static Boolean verifyServerSignature(IAuctionSystem stub, String userName,
+        KeyPair userKeyPair, PublicKey serverPubKey, Integer userId) {
+
+    System.out.println("[SECURITY] Verifying server identity...");
+    String verificationMessage = userName;
+    Signature signature;
+    CryptoManager cryptoManager = new CryptoManager();
+    Cipher cipher;
+    byte[] digitalSignature;
+    byte[] encryptedSignature;
+    List<byte[]> serverSignatureReturn;
+    byte[] encryptedAES;
+    byte[] serverSignature;
+    SecretKey aesKey;
+
+    // Generate AES key (one-time use, only valid for this handshake)
+    try {
+      KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+      keyGenerator.init(256);
+      aesKey = keyGenerator.generateKey();
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[SECURITY ERROR]: Generating AES key for encryption");
+      return false;
+    }
+    // Sign message with user's private RSA key
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initSign(userKeyPair.getPrivate());
+      signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
+      digitalSignature = signature.sign();
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[SECURITY ERROR]: Problem " +
+        "generating digital signature with user's private RSA");
+      return false;
+    }
+    // Encrypt signature (hybrid encryption)
+    try {
+      // Encrypt signed message with AES Key
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+      encryptedSignature = cipher.doFinal(digitalSignature);
+
+      // Encrypt AES key with server's public RSA
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
+      encryptedAES = cipher.doFinal(aesKey.getEncoded());
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[SECURITY ERROR]: Problem encrypting signature or AES key");
+      return false;
+    }
+    // Get verification + ack signature from server
+    try {
+      // Hash digest of the signature (signature pre-AES encryption)
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      md.update(digitalSignature);
+      String signatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
+
+      serverSignatureReturn = stub.verifyClientSignature(
+        encryptedAES,
+        encryptedSignature,
+        verificationMessage,
+        userId,
+        signatureHashDigest);
+
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.DECRYPT_MODE, aesKey);
+      serverSignature = cipher.doFinal(serverSignatureReturn.get(0));
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[SECURITY ERROR]: Retrieving server signature");
+      return false;
+    }
+    // Verify validity of the signature from server
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initVerify(serverPubKey);
+      signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
+      if (!signature.verify(serverSignature)) return false;
+
+      // Show verification on stdout
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      md.update(serverSignature);
+      String returnHashDigest = cryptoManager.byteArrayToHex(md.digest());
+      System.out.println("[SERVER SIGNATURE VERIFICATION SUCCESS] Server signature verification complete");
+      System.out.println("+ Decrypted server's signature's hash digest: " + returnHashDigest);
+      System.out.println("+ Original server's signature's hash digest: " + cryptoManager.byteArrayToHex(serverSignatureReturn.get(1)) + "\n");
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[SECURITY ERROR]: Verifying server signature");
+      return false;
+    }
+    return true;
   }
 }

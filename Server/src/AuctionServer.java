@@ -197,7 +197,7 @@ public class AuctionServer implements IAuctionSystem {
   public void addBuyerForDoubleAuction(Integer userId, String itemType,
                                        Float bid) throws RemoteException {
     DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
-        itemType.toLowerCase(), k -> new DoubleAuction());
+        itemType.toLowerCase(), k -> new DoubleAuction(itemType));
     doubleAuciton.addBuyer(this.userList.get(userId), bid);
 
     if (this.doubleAuctionList.get(itemType.toLowerCase())
@@ -215,17 +215,17 @@ public class AuctionServer implements IAuctionSystem {
                                         Integer itemCond, Float resPrice,
                                         Float startPrice)
       throws RemoteException {
+
     DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
-        itemType.toLowerCase(), k -> new DoubleAuction());
-    AuctionItem item =
-        new AuctionItem(assignItemId(), itemName, itemType, itemDesc, itemCond);
+        itemType.toLowerCase(), k -> new DoubleAuction(itemType));
+
+    AuctionItem item = new AuctionItem(assignItemId(), itemName, itemType.toLowerCase(), itemDesc, itemCond);
     AuctionListing listing = new AuctionListing(item, startPrice, resPrice);
     doubleAuciton.addSeller(this.userList.get(userId), listing);
 
     if (this.doubleAuctionList.get(itemType.toLowerCase())
             .finalizeDoubleAuction()) {
       doubleAuciton.closeDoubleAuction();
-      this.doubleAuctionList.remove(itemType);
     }
   }
 
