@@ -38,7 +38,9 @@ public class DoubleAuction {
         : false;
   }
 
-  public synchronized void closeDoubleAuction() {
+  public synchronized HashMap<Integer, HashMap<Integer, String>> closeDoubleAuction() {
+
+    HashMap<Integer, HashMap<Integer, String>> returnMap = new HashMap<Integer, HashMap<Integer, String>>();
 
     List<Integer> orderedListings = this.listings.entrySet()
                     .stream()
@@ -60,15 +62,42 @@ public class DoubleAuction {
       int i = 0;
       for (Integer sellerId: orderedListings) {
         // A bid matches (>=) a reserve price from a seller
+        AuctionItem soldItem = listings.get(sellerId).getListing().getItem();
         if(listings.get(sellerId).getListing().getReservePrice() <= userBids.get(orderedBids.get(i)).getBid()) {
           listings.get(sellerId).getListing().setCurrentPrice(userBids.get(orderedBids.get(i)).getBid());
           listings.get(sellerId).getListing().setBestBidUser(userBids.get(orderedBids.get(i)).getUser().getUserName());
+
+          String soldString = "> Your double auction item was sold: "
+                              + soldItem.getItemTitle()
+                              + " (ID: " + soldItem.getItemId()
+                              + ")\n> Sold for: " 
+                              + listings.get(sellerId).getListing().getCurrentPrice()
+                              + " EUR\n"
+                              + "> Sold to: " + listings.get(sellerId).getListing().getBestBidUser();
+
+          String boughtString = "> Your bid for " 
+                              + soldItem.getItemTitle()
+                              + " was succesful\n> Bid: " 
+                              + listings.get(sellerId).getListing().getCurrentPrice()
+                              + " EUR\n"
+                              + "> Seller: " + listings.get(sellerId).getUser();
+
+
+          // Adds a list of bought items and succesful bids to send a message to the clients
+          HashMap<Integer, String> soldMap = new HashMap<Integer, String>();
+          soldMap.put(listings.get(sellerId).getUser().getUserId(), soldString);
+          returnMap.put(sellerId, soldMap);
+          HashMap<Integer, String> boughtMap = new HashMap<Integer, String>();
+          boughtMap.put(userBids.get(orderedBids.get(i)).getUser().getUserId(), boughtString);
+          returnMap.put(orderedBids.get(i), boughtMap);
+
+
           this.succesfulSellers.add(sellerId);
           this.succesfulBuyers.add(orderedBids.get(i));
           this.sellerCount--;
           this.buyerCount--;
         }
-        System.out.println("> Item: " + listings.get(sellerId).getListing().getItem().getItemTitle()
+        System.out.println("> Item: " + soldItem.getItemTitle()
                             + " | Seller: " + listings.get(sellerId).getUser().getUserName()
                             + " | Listed for: " + listings.get(sellerId).getListing().getReservePrice() + " EUR"
                             + " | Buyer: " + listings.get(sellerId).getListing().getBestBidUser()
@@ -82,7 +111,7 @@ public class DoubleAuction {
     } catch (Exception e) {
       e.printStackTrace();
     }
-
+    return returnMap;
   }
   private void removeSuccesfulAuctions() {
     for (int i=0; i < succesfulBuyers.size(); i++) {

@@ -145,8 +145,15 @@ public class AuctionServer implements IAuctionSystem {
 
     if (this.doubleAuctionList.get(itemType.toLowerCase())
             .finalizeDoubleAuction()) {
-      doubleAuciton.closeDoubleAuction();
-      this.doubleAuctionList.remove(itemType);
+      HashMap<Integer, HashMap<Integer, String>> doubleAuctionResults = doubleAuciton.closeDoubleAuction();
+      if (!doubleAuctionResults.isEmpty()) notifyAllDoubleAuctionUsers(doubleAuctionResults);
+    }
+  }
+
+  private void notifyAllDoubleAuctionUsers(HashMap<Integer, HashMap<Integer, String>> doubleAuctionResults) throws RemoteException {
+    for (HashMap<Integer, String> innerMap : doubleAuctionResults.values()) {
+      Map.Entry<Integer, String> entry = innerMap.entrySet().iterator().next();
+      notifyDoubleAuctionUser(entry.getValue(), entry.getKey());
     }
   }
 
@@ -170,7 +177,8 @@ public class AuctionServer implements IAuctionSystem {
 
     if (this.doubleAuctionList.get(itemType.toLowerCase())
             .finalizeDoubleAuction()) {
-      doubleAuciton.closeDoubleAuction();
+      HashMap<Integer, HashMap<Integer, String>> doubleAuctionResults = doubleAuciton.closeDoubleAuction();
+      if (!doubleAuctionResults.isEmpty()) notifyAllDoubleAuctionUsers(doubleAuctionResults);
     }
   }
 
@@ -483,12 +491,6 @@ public class AuctionServer implements IAuctionSystem {
       String name = "LZSCC.311 auction server";
       IAuctionSystem remoteObject =
           (IAuctionSystem) UnicastRemoteObject.exportObject(s, 0);
-
-      // String subscriberName = "LZSCC.311 auction subscriber";
-      // Client c = new Client();
-      // IAuctionSubscriber remoteSubscriber = (IAuctionSubscriber) UnicastRemoteObject.exportObject(c, 0);
-      // registry.rebind(subscriberName, remoteSubscriber);
-
 
       registry = LocateRegistry.getRegistry();
       registry.rebind(name, remoteObject);
