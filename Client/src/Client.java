@@ -2,8 +2,7 @@
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-
-
+import java.rmi.server.UnicastRemoteObject;
 // Cryptography and Security
 import java.security.KeyPair;
 import java.security.MessageDigest;
@@ -21,7 +20,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 
-public class Client {
+public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
 
   private final String userName;
   private final Integer userId;
@@ -30,7 +29,8 @@ public class Client {
   private PublicKey serverPublicKey;
   private static KeyPair clientKeyPair = CryptoManager.generateRSAKeys();
 
-  public Client(String userName, Integer userId) {
+  public Client(String userName, Integer userId) throws RemoteException {
+    super();
     this.userName = userName;
     this.userId = userId;
     this.userAuctions = new HashMap<Integer, AuctionListing>();
@@ -55,6 +55,7 @@ public class Client {
         }
         System.out.println("Logging in...");
         Client user = new Client(uName, server.addUser(uName, clientKeyPair.getPublic().getEncoded()));
+        server.registerSubscriber(user.userId, user);
         if (!verifyServerSignature(server, user.userName, clientKeyPair, user.serverPublicKey, user.userId)) {
           System.out.println("Could not validate server identity. Exiting...");
           System.exit(0);
@@ -84,6 +85,11 @@ public class Client {
             "\nCould not connect to the server. Trying again...\n");
       }
     }
+  }
+
+  @Override
+  public void getMessage(String message) throws RemoteException {
+    System.out.println("\n[INCOMING SERVER NOTIFICATION]\n" + message);
   }
 
   /*

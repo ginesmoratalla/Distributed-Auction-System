@@ -1,5 +1,4 @@
 // RMI
-import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -21,6 +20,7 @@ import java.security.PrivateKey;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
 // Misc imports
 import java.util.Random;
@@ -30,8 +30,10 @@ public class AuctionServer implements IAuctionSystem {
   private HashMap<String, HashMap<Integer, AuctionListing>> auctionList;
   private HashMap<String, DoubleAuction> doubleAuctionList;
   private static Integer globalId = 0;
+  private static Registry registry;
 
   private HashMap<Integer, AuctionUser> userList;
+  private HashMap<Integer, IAuctionSubscriber> subscriberList;
   private HashSet<String> userNames;
 
   private PrivateKey privateKey;
@@ -42,6 +44,7 @@ public class AuctionServer implements IAuctionSystem {
   public AuctionServer() {
     super();
     this.auctionList = new HashMap<String, HashMap<Integer, AuctionListing>>();
+    this.subscriberList = new HashMap<Integer, IAuctionSubscriber>();
     this.doubleAuctionList = new HashMap<String, DoubleAuction>();
     this.userList = new HashMap<Integer, AuctionUser>();
     this.userNames = new HashSet<String>();
@@ -51,93 +54,6 @@ public class AuctionServer implements IAuctionSystem {
   }
 
   /*
-   * Method for RMI
-   *
-   * Two-way digital signature handshake to verify user's identity
-   * and send an acknowledgement signature back to the user.
-   *
-   * Hybrid encripyion -> symmetric AES key + asymmetric RSA signature.
-   */
-  public synchronized List<byte[]> verifyClientSignature(byte[] encryptedAES, byte[] encryptedSignature,
-    String originalMessage, Integer userId, String originalSignatureHashDigest) throws RemoteException {
-
-    CryptoManager cryptoManager = new CryptoManager();
-    Cipher cipher;
-    Signature signature;
-    AuctionUser user = this.userList.get(userId);
-    byte[] decryptedSignature;
-    byte[] serverReturnSignature;
-    byte[] serverSignatureHashDigest;
-    SecretKey aesKey;
-
-    // Decrypt encrypted AES key with server's private RSA key
-    try {
-      cipher = Cipher.getInstance("RSA");
-      cipher.init(Cipher.DECRYPT_MODE, this.privateKey);
-      aesKey = new SecretKeySpec(cipher.doFinal(encryptedAES), "AES");
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[DECRYPTION ERROR]: Problem decrypting AES key with server's private RSA key");
-      return null;
-    }
-    // Decrypt encrypted signature given by user with the decrypted AES key
-    try {
-      cipher = Cipher.getInstance("AES");
-      cipher.init(Cipher.DECRYPT_MODE, aesKey);
-      decryptedSignature = cipher.doFinal(encryptedSignature);
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("[DECRYPTION ERROR]: Problem decrypting signature with server's private key");
-      return null;
-    }
-    // Check whether message has not been tampered with (verify signature)
-    try {
-      signature = Signature.getInstance("SHA256WithRSA");
-      signature.initVerify(user.getPublicKey());
-      signature.update(originalMessage.getBytes(StandardCharsets.UTF_8));
-
-      if (!signature.verify(decryptedSignature))
-        throw new Exception("[USER SIGNATURE VERIFICATION ERROR]: Wrong Client Signature");
-
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      md.update(decryptedSignature);
-      String decryptedSignatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
-
-      System.out.println("\n[USER SIGNATURE VERIFICATION SUCCESS] Client verification complete for user: " + user.getUserName());
-      System.out.println("+ Decrypted signature's hash digest: " + decryptedSignatureHashDigest);
-      System.out.println("+ Original signature's hash digest: " + originalSignatureHashDigest + "\n");
-
-    } catch (Exception e) {
-      System.out.println("[SIGNATURE VERIFICATION ERROR]: Error verifying user signature");
-      return null;
-    }
-    // Create server signature
-    try {
-      signature = Signature.getInstance("SHA256WithRSA");
-      signature.initSign(this.privateKey);
-      signature.update(originalMessage.getBytes(StandardCharsets.UTF_8));
-      serverReturnSignature = signature.sign();
-    } catch (Exception e) {
-      System.out.println("[SERVER SIGNATURE ERROR]: Problem generating server signature");
-      return null;
-    }
-    // Encrypt server signature with AES Key
-    try {
-      // Hash digest of server signature (pre-AES encryption)
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      md.update(serverReturnSignature);
-      serverSignatureHashDigest = md.digest();
-
-      cipher = Cipher.getInstance("AES");
-      cipher.init(Cipher.ENCRYPT_MODE, aesKey);
-      serverReturnSignature = cipher.doFinal(serverReturnSignature);
-    } catch (Exception e) {
-      System.out.println("[SERVER SIGNATURE ENCRYPTION ERROR]: Problem encrypting server signature with AES Key");
-      return null;
-    }
-    return List.of(serverReturnSignature, serverSignatureHashDigest);
-  }
-  /*
    * Adds item to server's global list
    *
    * Global ID is updated ensuring mutex.
@@ -146,7 +62,6 @@ public class AuctionServer implements IAuctionSystem {
 
   /*
    * Adds aucitoned item listing to server's global list
-   *
    */
   private AuctionListing addListing(AuctionListing listing) {
     String itemType = listing.getItem().getItemType().toLowerCase();
@@ -156,6 +71,32 @@ public class AuctionServer implements IAuctionSystem {
 
     return listing;
   }
+
+  public void notifyDoubleAuctionUser(String notification, Integer userId) throws RemoteException {
+    IAuctionSubscriber subscriber = this.subscriberList.get(userId);
+    sendMessage(subscriber, notification);
+  }
+
+  /*
+   * Method for RMI
+   *
+   * Add subscriber to a list to get server notifications
+   */
+  public void sendMessage(IAuctionSubscriber subscriber, String message) throws RemoteException {
+    subscriber.getMessage(message);
+  }
+
+  /*
+   * Method for RMI
+   *
+   * Add subscriber to a list to get server notifications
+   *
+   */
+  public void registerSubscriber(Integer userId, IAuctionSubscriber subscriber) throws RemoteException {
+    this.subscriberList.put(userId, subscriber);
+    System.out.println("> User " + this.userList.get(userId).getUserName() + " registered as subscriber");
+  }
+
 
   /*
    * Method for RMI
@@ -193,6 +134,8 @@ public class AuctionServer implements IAuctionSystem {
 
   /*
    * Method for RMI
+   *
+   * Adds an auction listing to a list of double auctions by item type.
    */
   public void addBuyerForDoubleAuction(Integer userId, String itemType,
                                        Float bid) throws RemoteException {
@@ -209,6 +152,8 @@ public class AuctionServer implements IAuctionSystem {
 
   /*
    * Method for RMI
+   *
+   * Adds a bid to a double auction for a specific type.
    */
   public void addSellerForDoubleAuction(Integer userId, String itemName,
                                         String itemType, String itemDesc,
@@ -410,6 +355,10 @@ public class AuctionServer implements IAuctionSystem {
     return true;
   }
 
+  /*
+   * Method for RMI
+   *
+   */
   public String getAuctionedItems() throws RemoteException {
     if (this.auctionList.isEmpty() ||
         this.auctionList.values().stream().allMatch(Map::isEmpty))
@@ -438,6 +387,94 @@ public class AuctionServer implements IAuctionSystem {
   }
 
   /*
+   * Method for RMI
+   *
+   * Two-way digital signature handshake to verify user's identity
+   * and send an acknowledgement signature back to the user.
+   *
+   * Hybrid encripyion -> symmetric AES key + asymmetric RSA signature.
+   */
+  public synchronized List<byte[]> verifyClientSignature(byte[] encryptedAES, byte[] encryptedSignature,
+    String originalMessage, Integer userId, String originalSignatureHashDigest) throws RemoteException {
+
+    CryptoManager cryptoManager = new CryptoManager();
+    Cipher cipher;
+    Signature signature;
+    AuctionUser user = this.userList.get(userId);
+    byte[] decryptedSignature;
+    byte[] serverReturnSignature;
+    byte[] serverSignatureHashDigest;
+    SecretKey aesKey;
+
+    // Decrypt encrypted AES key with server's private RSA key
+    try {
+      cipher = Cipher.getInstance("RSA");
+      cipher.init(Cipher.DECRYPT_MODE, this.privateKey);
+      aesKey = new SecretKeySpec(cipher.doFinal(encryptedAES), "AES");
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[DECRYPTION ERROR]: Problem decrypting AES key with server's private RSA key");
+      return null;
+    }
+    // Decrypt encrypted signature given by user with the decrypted AES key
+    try {
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.DECRYPT_MODE, aesKey);
+      decryptedSignature = cipher.doFinal(encryptedSignature);
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("[DECRYPTION ERROR]: Problem decrypting signature with server's private key");
+      return null;
+    }
+    // Check whether message has not been tampered with (verify signature)
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initVerify(user.getPublicKey());
+      signature.update(originalMessage.getBytes(StandardCharsets.UTF_8));
+
+      if (!signature.verify(decryptedSignature))
+        throw new Exception("[USER SIGNATURE VERIFICATION ERROR]: Wrong Client Signature");
+
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      md.update(decryptedSignature);
+      String decryptedSignatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
+
+      System.out.println("\n[USER SIGNATURE VERIFICATION SUCCESS] Client verification complete for user: " + user.getUserName());
+      System.out.println("+ Decrypted signature's hash digest: " + decryptedSignatureHashDigest);
+      System.out.println("+ Original signature's hash digest: " + originalSignatureHashDigest + "\n");
+
+    } catch (Exception e) {
+      System.out.println("[SIGNATURE VERIFICATION ERROR]: Error verifying user signature");
+      return null;
+    }
+    // Create server signature
+    try {
+      signature = Signature.getInstance("SHA256WithRSA");
+      signature.initSign(this.privateKey);
+      signature.update(originalMessage.getBytes(StandardCharsets.UTF_8));
+      serverReturnSignature = signature.sign();
+    } catch (Exception e) {
+      System.out.println("[SERVER SIGNATURE ERROR]: Problem generating server signature");
+      return null;
+    }
+    // Encrypt server signature with AES Key
+    try {
+      // Hash digest of server signature (pre-AES encryption)
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      md.update(serverReturnSignature);
+      serverSignatureHashDigest = md.digest();
+
+      cipher = Cipher.getInstance("AES");
+      cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+      serverReturnSignature = cipher.doFinal(serverReturnSignature);
+    } catch (Exception e) {
+      System.out.println("[SERVER SIGNATURE ENCRYPTION ERROR]: Problem encrypting server signature with AES Key");
+      return null;
+    }
+    return List.of(serverReturnSignature, serverSignatureHashDigest);
+  }
+
+  /*
    * Server initiation.
    */
   public static void main(String[] args) {
@@ -445,8 +482,15 @@ public class AuctionServer implements IAuctionSystem {
       AuctionServer s = new AuctionServer();
       String name = "LZSCC.311 auction server";
       IAuctionSystem remoteObject =
-          (IAuctionSystem)UnicastRemoteObject.exportObject(s, 0);
-      Registry registry = LocateRegistry.getRegistry();
+          (IAuctionSystem) UnicastRemoteObject.exportObject(s, 0);
+
+      // String subscriberName = "LZSCC.311 auction subscriber";
+      // Client c = new Client();
+      // IAuctionSubscriber remoteSubscriber = (IAuctionSubscriber) UnicastRemoteObject.exportObject(c, 0);
+      // registry.rebind(subscriberName, remoteSubscriber);
+
+
+      registry = LocateRegistry.getRegistry();
       registry.rebind(name, remoteObject);
 
       System.out.println("> Server ready");
