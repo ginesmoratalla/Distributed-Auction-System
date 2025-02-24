@@ -3,12 +3,13 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-
+import java.util.ArrayDeque;
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 // Signature and Security
 import java.security.KeyFactory;
@@ -74,7 +75,7 @@ public class AuctionServer implements IAuctionSystem {
 
   public void notifyDoubleAuctionUser(String notification, Integer userId) throws RemoteException {
     IAuctionSubscriber subscriber = this.subscriberList.get(userId);
-    sendMessage(subscriber, notification);
+    sendMessage(userId, subscriber, notification);
   }
 
   /*
@@ -82,8 +83,8 @@ public class AuctionServer implements IAuctionSystem {
    *
    * Add subscriber to a list to get server notifications
    */
-  public void sendMessage(IAuctionSubscriber subscriber, String message) throws RemoteException {
-    subscriber.getMessage(message);
+  public void sendMessage(Integer userId, IAuctionSubscriber subscriber, String message) throws RemoteException {
+    subscriber.getMessage(userId, message);
   }
 
   /*

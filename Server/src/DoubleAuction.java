@@ -80,7 +80,7 @@ public class DoubleAuction {
                               + " was succesful\n> Bid: " 
                               + listings.get(sellerId).getListing().getCurrentPrice()
                               + " EUR\n"
-                              + "> Seller: " + listings.get(sellerId).getUser();
+                              + "> Seller: " + listings.get(sellerId).getUser().getUserName();
 
 
           // Adds a list of bought items and succesful bids to send a message to the clients

@@ -88,8 +88,10 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
   @Override
-  public void getMessage(String message) throws RemoteException {
-    System.out.println("\n[INCOMING SERVER NOTIFICATION]\n" + message + "\n");
+  public void getMessage(Integer directedUserId, String message) throws RemoteException {
+    if (directedUserId.equals(userId)) {
+      System.out.println("\n[INCOMING SERVER NOTIFICATION]\n" + message + "\n");
+    }
   }
 
   /*

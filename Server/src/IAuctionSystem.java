@@ -52,6 +52,5 @@ public interface IAuctionSystem extends Remote {
                                       String originalSignatureHashDigest)
       throws RemoteException;
 
-  public void sendMessage(IAuctionSubscriber subscriber, String message) throws RemoteException;
   public void registerSubscriber(Integer userId, IAuctionSubscriber subscriber) throws RemoteException;
 }
