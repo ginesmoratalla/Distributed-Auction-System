@@ -1,4 +1,5 @@
 public enum AuctionItemTypeEnum {
+  COMPUTER("Computer"),
   BOOK("Book"),
   PHONE("Phone"),
   COAT("Coat"),

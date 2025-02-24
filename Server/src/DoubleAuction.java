@@ -1,7 +1,6 @@
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -38,12 +37,14 @@ public class DoubleAuction {
 
     HashMap<Integer, HashMap<Integer, String>> returnMap = new HashMap<Integer, HashMap<Integer, String>>();
 
+    // Sort sellers from highest to lowest minimum price
     List<Integer> orderedListings = this.listings.entrySet()
                     .stream()
                     .sorted(compareBySellerPrice.reversed())
                     .map(Map.Entry::getKey)
                     .toList();
 
+    // Sort buyers from lowest to highest bid
     List<Integer> orderedBids = this.userBids.entrySet()
                     .stream()
                     .sorted(Comparator.comparing(entry -> entry.getValue().getBid()))
@@ -74,10 +75,10 @@ public class DoubleAuction {
                               + " EUR\n"
                               + "> Sold to: " + listings.get(sellerId).getListing().getBestBidUser();
 
-          boughtString = "> Your bid for " 
+          boughtString = "> Your bid for "
                               + soldItem.getItemTitle()
                               + " (" + soldItem.getItemType() + ")"
-                              + " was succesful\n> Bid: " 
+                              + " was succesful\n> Bid: "
                               + listings.get(sellerId).getListing().getCurrentPrice()
                               + " EUR\n"
                               + "> Seller: " + listings.get(sellerId).getUser().getUserName();
@@ -85,15 +86,15 @@ public class DoubleAuction {
 
         } else {
           soldString = "> Your double auction item was NOT sold: "
-                              + soldItem.getItemTitle() 
+                              + soldItem.getItemTitle()
                               + " (" + soldItem.getItemType() + ")"
                               + " || ID: " + soldItem.getItemId()
-                              + "\n> Listed for: " 
+                              + "\n> Listed for: "
                               + listings.get(sellerId).getListing().getReservePrice();
 
-          boughtString = "> Your bid for item " 
+          boughtString = "> Your bid for item "
                               + soldItem.getItemType()
-                              + " was NOT succesful\n> Bid: " 
+                              + " was NOT succesful\n> Bid: "
                               + userBids.get(orderedBids.get(i)).getBid()
                               + " EUR\n";
         }

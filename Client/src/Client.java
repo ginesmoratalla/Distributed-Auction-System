@@ -3,6 +3,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+
 // Cryptography and Security
 import java.security.KeyPair;
 import java.security.MessageDigest;
@@ -535,6 +536,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
       keyGenerator.init(256);
       aesKey = keyGenerator.generateKey();
+      System.out.println("[SECURITY LOG]: Succesfully generated AES session key");
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("[SECURITY ERROR]: Generating AES key for encryption");
@@ -546,6 +548,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       signature.initSign(userKeyPair.getPrivate());
       signature.update(verificationMessage.getBytes(StandardCharsets.UTF_8));
       digitalSignature = signature.sign();
+      System.out.println("[SECURITY LOG]: Succesfully generated Signature with your RSA private key");
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("[SECURITY ERROR]: Problem " +
@@ -558,11 +561,13 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       cipher = Cipher.getInstance("AES");
       cipher.init(Cipher.ENCRYPT_MODE, aesKey);
       encryptedSignature = cipher.doFinal(digitalSignature);
+      System.out.println("[SECURITY LOG]: Succesfully encrypted your RSA signature with the AES session key");
 
       // Encrypt AES key with server's public RSA
       cipher = Cipher.getInstance("RSA");
       cipher.init(Cipher.ENCRYPT_MODE, serverPubKey);
       encryptedAES = cipher.doFinal(aesKey.getEncoded());
+      System.out.println("[SECURITY LOG]: Succesfully encrypted AES session key with the Server's public RSA key");
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("[SECURITY ERROR]: Problem encrypting signature or AES key");
@@ -575,16 +580,19 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       md.update(digitalSignature);
       String signatureHashDigest = cryptoManager.byteArrayToHex(md.digest());
 
+      System.out.println("[SECURITY LOG]: Sending verification to the server (Your signature + Signature's RSA hash digest + Encrypted AES session key)");
       serverSignatureReturn = stub.verifyClientSignature(
         encryptedAES,
         encryptedSignature,
         verificationMessage,
         userId,
         signatureHashDigest);
+      System.out.println("[SECURITY LOG]: Verifying server's identity...");
 
       cipher = Cipher.getInstance("AES");
       cipher.init(Cipher.DECRYPT_MODE, aesKey);
       serverSignature = cipher.doFinal(serverSignatureReturn.get(0));
+      System.out.println("[SECURITY LOG]: Decrypting server's signature with AES session key");
     } catch (Exception e) {
       e.printStackTrace();
       System.out.println("[SECURITY ERROR]: Retrieving server signature");
