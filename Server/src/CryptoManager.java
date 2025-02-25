@@ -10,9 +10,9 @@ import java.security.PublicKey;
  */
 public class CryptoManager {
 
-  /*
+  /**
    * Generate RSA key pairs for clients (auction users)
-   * */
+   */
   public static KeyPair generateRSAKeys() {
     try {
       KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -29,7 +29,7 @@ public class CryptoManager {
     return null;
   }
 
-  /*
+  /**
    * Load server's private key from disk
    */
   public static PrivateKey loadPrivateKey(String dir) {
@@ -47,7 +47,7 @@ public class CryptoManager {
     return privK;
   }
 
-  /*
+  /**
    * Load server's public key from disk
    */
   public static PublicKey loadPublicKey(String dir) {
@@ -65,7 +65,7 @@ public class CryptoManager {
     return pubK;
   }
 
-  /*
+  /**
    * Pretty printer for byte Hash digests
    */
   public String byteArrayToHex(byte[] byteArray) {

@@ -269,7 +269,8 @@ public class AuctionServer implements IAuctionSystem {
         this.auctionList.get(type.toLowerCase()).size() == 0)
       return null;
 
-    String list = "--- All Available " + type + "---\n";
+    String barrier = "--- All Available " + type.toUpperCase() + " ---\n";
+    String list = "-".repeat(barrier.length() - 1) + "\n" + barrier;
     for (Map.Entry<Integer, AuctionListing> listing :
          this.auctionList.get(type.toLowerCase()).entrySet()) {
       list += "ID: " + listing.getKey() + "\n"
@@ -282,6 +283,7 @@ public class AuctionServer implements IAuctionSystem {
                    : listing.getValue().getCurrentPrice()) +
               " EUR\n\n";
     }
+    list += "-".repeat(barrier.length() - 1) + "\n" + "-".repeat(barrier.length() - 1) + "\n";
     return list;
   }
 
@@ -311,8 +313,7 @@ public class AuctionServer implements IAuctionSystem {
    * Method for RMI
    *
    * Place a bid.
-   *
-   * @return Boolean; whether the bid was placed succesfully (auction ID exists)
+   * @return Boolean: whether the bid was placed succesfully (auction ID exists)
    */
   public void placeBid(Integer userId, Integer auctionListingId, Float bid)
       throws RemoteException {
@@ -376,29 +377,32 @@ public class AuctionServer implements IAuctionSystem {
    * Sends complete list of auctioned items (forward auction)
    */
   public String getAuctionedItems() throws RemoteException {
-    if (this.auctionList.isEmpty() ||
-        this.auctionList.values().stream().allMatch(Map::isEmpty))
+    if (this.auctionList.isEmpty() || this.auctionList.values().stream().allMatch(Map::isEmpty))
       return null;
-    String introStr = "\n===== ALL AVAILABLE AUCTIONED ITEMS ======\n";
+
+    String introStr = "\n|---- Forward Auction List (all available items) ----|\n";
+    introStr += "|----------------------------------------------------|\n";
     String strToStd = introStr;
     for (HashMap.Entry<String, HashMap<Integer, AuctionListing>> listing :
          this.auctionList.entrySet()) {
       for (HashMap.Entry<Integer, AuctionListing> entry :
            this.auctionList.get(listing.getKey()).entrySet()) {
-
-        strToStd +=
-            "ID: " + entry.getValue().getItem().getItemId() +
-            " || item: " + entry.getValue().getItem().getItemTitle() +
-            " || starting price: " + entry.getValue().getStartingPrice() +
-            " EUR"
-            + " || current best bid: " +
-            ((entry.getValue().getCurrentPrice() == 0.0f)
-                 ? "No best bid yet"
-                 : entry.getValue().getCurrentPrice()) +
-            "\n";
+        strToStd += "\n------------------------------------------" + String.format(
+          "\n| %-22s %-15s |" +
+          "\n| %-22s %-15s |" +
+          "\n| %-22s %-15s |" +
+          "\n| %-22s %-15s |",
+          "ID:", entry.getValue().getItem().getItemId(),
+          "Item:", entry.getValue().getItem().getItemTitle(),
+          "Starting price:", entry.getValue().getStartingPrice(),
+          "Current best bid:", (entry.getValue().getCurrentPrice() == 0.0f) 
+              ? "No bids yet"
+              : (entry.getValue().getCurrentPrice().toString() + " EUR")
+        ) + "\n------------------------------------------\n\n";
       }
     }
-    strToStd += "=".repeat(introStr.length() - 2) + "\n";
+    strToStd += "|----------------------------------------------------|\n";
+    strToStd += "|----------------------------------------------------|\n";
     return strToStd;
   }
 

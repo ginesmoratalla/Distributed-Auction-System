@@ -66,21 +66,12 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
         // Main client Loop
         Integer operation = 0;
         while (true) {
-          System.out.println("\n--- Available Operations ---"
-                             + "\n1. Create auction for an item"
-                             + "\n2. Close your auction"
-                             + "\n3. Select forward auction mode"
-                             + "\n4. Select reverse auction mode"
-                             + "\n5. Select double auction mode"
-                             + "\n0. Exit"
-                             + "\n");
-
+          System.out.println(ClientInputManager.MAIN_MENU_OPERATIONS);
           System.out.print("Select an operation (type the number): ");
           operation = user.inputManager.getOperation(input.nextLine());
           boolean exit = user.execOperation(operation, server, input);
           if (exit) { System.exit(0); }
         }
-
       } catch (Exception e) {
         e.printStackTrace();
         System.out.println(
@@ -100,7 +91,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
   /*
-   * Connect to RMI registry and get stub
+   * Connect to RMI registry and get server stub
    *
    */
   public static IAuctionSystem connectToServer(String name)
@@ -176,7 +167,6 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
         if(this.inputManager.getStringFromClient(input).equals("yes")) {
           this.executeItemOperation(2, itemId, server, input);
         }
-
       } else {
         System.out.println("\nERROR: Item with ID: " + itemId +
                            " could not be found.\n");
@@ -184,7 +174,6 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     } catch (Exception e) {
       e.printStackTrace();
     }
-
   }
 
   /*
@@ -213,15 +202,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       return;
     }
 
-    System.out.print(
-        "\nIs your item new or used?"
-        + "\nRate its usage in a scale:\n"
-        + "1 (new)\n"
-        + "2 (barely used)\n"
-        + "3 (used)\n"
-        + "4 (moderately used)\n"
-        + "5 (heavily used)\n"
-        + "PSA: Anything outside of this scale will default to \"Used\": ");
+    System.out.print(ClientInputManager.ITEM_USAGE_SCALE);
     Integer condition = this.inputManager.getIntegerFromClient(input);
 
     System.out.print(
@@ -317,17 +298,12 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     }
   }
 
-
   /*
    * Double auction options menu
    */
   public void viewDoubleAuction(IAuctionSystem server, Scanner input) {
     Integer operation = 0;
-    System.out.println("\n--- Double auction operations ---"
-                       + "\n1. Sell an item"
-                       + "\n2. Place a bid"
-                       + "\n0. Return to home"
-                       + "\n");
+    System.out.println(ClientInputManager.DOUBLE_AUCTION_OPERATIONS);
     System.out.print("Please, select an operation: ");
     operation = this.inputManager.getIntegerFromClient(input);
     doubleAuctionOperation(server, input, operation);
@@ -350,7 +326,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       System.out.println(auctionedItems);
     } catch (Exception e) {
       System.out.println(
-          "ERROR: unable to retreive item list from server. Going back...\n");
+          "[SERVER ERROR]: Unable to retreive item list from server. Going back...\n");
     }
     System.out.print("Please, type the item ID from the corresponding item " +
                      "you want to operate on: ");
@@ -365,16 +341,11 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
         }
         break;
       } catch (Exception e) {
-        System.out.print("ERROR: Not a valid input type, please try again: ");
+        System.out.print("[SERVER ERROR]: Unable to retrieve item from server.");
       }
     }
     Integer operation = 0;
-    System.out.println("\n--- Item operations ---"
-                       + "\n1. Get item specs"
-                       + "\n2. Place a bid on the item"
-                       + "\n3. Select a different item"
-                       + "\n0. Return to home"
-                       + "\n");
+    System.out.println(ClientInputManager.REGULAR_AUCTION_OPERATIONS);
     System.out.print("Please, select an operation: ");
     operation = this.inputManager.getIntegerFromClient(input);
     this.executeItemOperation(operation, selectedId, server, input);
@@ -404,7 +375,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
         break;
       }
     } catch (Exception e) {
-      System.out.println("ERROR: Error during item operation execution");
+      System.out.println("[ERROR]: Error during item operation execution");
     }
   }
 
@@ -425,19 +396,18 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
         }
         break;
       } catch (Exception e) {
-        System.out.print("ERROR: Not a valid input type, please try again: ");
+        System.out.print("[ERROR]: Not a valid input type, please try again: ");
       }
     }
-
     try {
       // Item was sold before bid could be placed
       if (!server.idMatchesExistingItem(idToBid)) {
-        System.out.println("ERROR connecting to the server. Bid was not placed");
+        System.out.println("[ERROR] Connecting to the server. Bid was not placed");
       }
       server.placeBid(this.userId, idToBid, bid);
       System.out.println("[BID INFO] Bid placed succesfully.");
     } catch (Exception e) {
-      System.out.println("ERROR connecting to the server. Bid was not placed");
+      System.out.println("[ERROR] Connecting to the server. Bid was not placed");
     }
     return;
   }
@@ -467,7 +437,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
       System.out.println("[DOUBLE AUCTION INFO]: Bid placed succesfully.\n");
 
     } catch (Exception e) {
-      System.out.println("ERROR: Connecting to the server. Try again...");
+      System.out.println("[ERROR]: Connecting to the server. Try again...");
       return;
     }
   }
@@ -480,27 +450,23 @@ r  *
    */
   public void closeAuction(IAuctionSystem server, Scanner input) {
     listPersonalAuctions();
-    if (this.userAuctions.isEmpty())
-      return;
+    if (this.userAuctions.isEmpty()) return;
 
-    System.out.print(
-        "\nSelect which auction to close (type corresponding ID): ");
-
+    System.out.print("\nSelect auction ID to close (\"exit\" to go back): ");
     Integer idToClose = null;
     while (true) {
       idToClose = this.inputManager.getIntegerFromClient(input);
       if (this.userAuctions.containsKey(idToClose)) {
         break;
-      }
-      System.out.print(
-          "\nID not amongst your auctioned items, please try again: ");
+      } else if (idToClose.equals(-1)) return;
+      System.out.print("\nID not amongst your auctioned items, please try again: ");
     }
+
     // Try remote method
     try {
       AuctionListing sold = server.closeAuction(idToClose, this.userAuctions.get(idToClose).getItem().getItemType(), this.userId);
       if (sold.getCurrentPrice() == null) {
         System.out.println("[ERROR] Something went wrong...\n");
-
       } else if (sold.getCurrentPrice() < sold.getReservePrice()) {
         System.out.println("[AUCTION INFO] Item was not sold (did not " +
                            "reach reserve price). Bid closed\n");
@@ -513,27 +479,23 @@ r  *
       }
       System.out.println(sold.getAuctionLogs());
       this.userAuctions.remove(idToClose);
+
     } catch (RemoteException e) {
       e.printStackTrace();
       System.out.println(
-          "ERROR: Retrieving auction listing from server.\n");
+          "[SERVER ERROR]: Retrieving auction listing from server.\n");
     }
   }
-
   /*
    * Lists current auctioned items, if any.
    * (user's personal auctions)
    */
   public void listPersonalAuctions() {
     if (this.userAuctions.isEmpty()) {
-      System.out.println("You have no auctioned items, going back...");
+      System.out.println("[PERSONAL AUCTION FAILURE] You have no auctioned items, going back...");
       return;
     }
-    System.out.println("\n---" + this.userName + " auctioned items ---");
-    for (Map.Entry<Integer, AuctionListing> entry : this.userAuctions.entrySet()) {
-      System.out.println("ID: " + entry.getKey() +
-                         " | item: " + entry.getValue().getItem().getItemTitle());
-    }
+    System.out.println(ClientInputManager.printUserPersonalAuctions(this.userName, this.userAuctions));
   }
 
   /*
