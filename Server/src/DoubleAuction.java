@@ -25,6 +25,9 @@ public class DoubleAuction {
     this.sellerCount = 0;
   }
 
+  /*
+   * Check if auction needs to be closed
+   */
   public Boolean finalizeDoubleAuction() {
     System.out.println("> Seller count (double auction " + this.auctionItemType + "): " + this.sellerCount);
     System.out.println("> Buyer count (double auction " + this.auctionItemType + "):" + this.buyerCount);
@@ -33,8 +36,10 @@ public class DoubleAuction {
         : false;
   }
 
+  /*
+   * Matches buyers with sellers
+   */
   public synchronized HashMap<Integer, HashMap<Integer, String>> closeDoubleAuction() {
-
     HashMap<Integer, HashMap<Integer, String>> returnMap = new HashMap<Integer, HashMap<Integer, String>>();
 
     // Sort sellers from highest to lowest minimum price
@@ -138,6 +143,7 @@ public class DoubleAuction {
     this.userBids.put(buyerDoubleAuctionId, new DoubleAuctionPair(user, bid));
     this.buyerCount++;
   }
+
   public synchronized void addSeller(AuctionUser user, AuctionListing listing) {
     Integer sellerDoubleAuctionId = this.randomGenerator.nextInt(1000);
     while(this.listings.containsKey(sellerDoubleAuctionId)) {

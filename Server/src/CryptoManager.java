@@ -5,8 +5,14 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 
+/*
+ * Helper class to manage RSA key loading and generation
+ */
 public class CryptoManager {
 
+  /*
+   * Generate RSA key pairs for clients (auction users)
+   * */
   public static KeyPair generateRSAKeys() {
     try {
       KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -23,6 +29,9 @@ public class CryptoManager {
     return null;
   }
 
+  /*
+   * Load server's private key from disk
+   */
   public static PrivateKey loadPrivateKey(String dir) {
     PrivateKey privK = null;
     try (ObjectInputStream privateKeyStream =
@@ -38,6 +47,9 @@ public class CryptoManager {
     return privK;
   }
 
+  /*
+   * Load server's public key from disk
+   */
   public static PublicKey loadPublicKey(String dir) {
     PublicKey pubK = null;
     try (ObjectInputStream publicKeyStream =
@@ -53,6 +65,9 @@ public class CryptoManager {
     return pubK;
   }
 
+  /*
+   * Pretty printer for byte Hash digests
+   */
   public String byteArrayToHex(byte[] byteArray) {
     StringBuilder hexStringBuilder = new StringBuilder();
     for (byte singularByte : byteArray) {

@@ -3,13 +3,12 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayDeque;
+
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 // Signature and Security
 import java.security.KeyFactory;
@@ -69,10 +68,14 @@ public class AuctionServer implements IAuctionSystem {
     this.auctionList
         .computeIfAbsent(itemType, k -> new HashMap<Integer, AuctionListing>())
         .put(listing.getItem().getItemId(), listing);
-
     return listing;
   }
 
+  /*
+   * Sends result message from double auction to client (Pub-Sub)
+   *
+   * One channel, userId filters who recieves message
+   */
   public void notifyDoubleAuctionUser(String notification, Integer userId) throws RemoteException {
     IAuctionSubscriber subscriber = this.subscriberList.get(userId);
     sendMessage(userId, subscriber, notification);
@@ -90,7 +93,7 @@ public class AuctionServer implements IAuctionSystem {
   /*
    * Method for RMI
    *
-   * Add subscriber to a list to get server notifications
+   * Add subscriber to a list to get server notifications (Pub-Sub)
    *
    */
   public void registerSubscriber(Integer userId, IAuctionSubscriber subscriber) throws RemoteException {
@@ -151,6 +154,9 @@ public class AuctionServer implements IAuctionSystem {
     }
   }
 
+  /*
+   * Sends double auction results to all participants
+   */
   private void notifyAllDoubleAuctionUsers(HashMap<Integer, HashMap<Integer, String>> doubleAuctionResults) throws RemoteException {
     for (HashMap<Integer, String> innerMap : doubleAuctionResults.values()) {
       Map.Entry<Integer, String> entry = innerMap.entrySet().iterator().next();
@@ -345,7 +351,7 @@ public class AuctionServer implements IAuctionSystem {
   /*
    * Method for RMI
    *
-   * Checks if the price prompted by a buyer exceeds the starting price for item
+   * Checks if the price prompted by a buyer exceeds the starting/current price for item
    */
   public Boolean isBidPriceAcceptable(Integer listingId, Float price)
       throws RemoteException {
@@ -367,6 +373,7 @@ public class AuctionServer implements IAuctionSystem {
   /*
    * Method for RMI
    *
+   * Sends complete list of auctioned items (forward auction)
    */
   public String getAuctionedItems() throws RemoteException {
     if (this.auctionList.isEmpty() ||

@@ -21,6 +21,9 @@ import java.util.Map;
 import java.util.Scanner;
 
 
+/**
+ * Auction Client
+ */
 public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
 
   private final String userName;
@@ -40,9 +43,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
   public static void main(String[] args) {
-
     Scanner input = new Scanner(System.in);
-
     while (true) {
       try {
         IAuctionSystem server = connectToServer("LZSCC.311 auction server");
@@ -88,6 +89,9 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     }
   }
 
+  /*
+   * Print message from double auction directed to the client
+   */
   @Override
   public void getMessage(Integer directedUserId, String message) throws RemoteException {
     if (directedUserId.equals(userId)) {
@@ -154,7 +158,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
   /*
-   * Returns item details from server
+   * Returns item details from server (forward + reverse auction)
    */
   public void getItemSpec(IAuctionSystem server, Scanner input, Integer itemId)
       throws RemoteException
@@ -183,6 +187,9 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
 
   }
 
+  /*
+   * Create auction listing (valid for all auction types)
+   */
   public void createAuction(IAuctionSystem server, Scanner input, Boolean isDoubleAuction) {
 
     System.out.print("\nCreating new auction...\nWhat is the name of your item? ");
@@ -251,7 +258,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
   /*
-   *
+   * Return items filtered by category
    */
   public void viewReverseAuction(IAuctionSystem server, Scanner input) {
     String type = null;
@@ -310,35 +317,9 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     }
   }
 
-  public void placeBidDoubleAuction(IAuctionSystem server, Scanner input) {
-    String type = null;
-    Float bid = null;
-    try {
-      System.out.println(server.retrieveItemTypes());
-      System.out.print("Select the type of your item among the list: ");
-      while(true) {
-        type = this.inputManager.getStringFromClient(input);
-        if (server.itemTypeExists(type)) {
-          break;
-        }
-        System.out.print("Type does not exist. Try again: ");
-      }
-
-      System.out.print(
-          "\nPlease, type the ammount of money (EUR) of your bid."
-          + "\nNote - decimal cents (if any) must be separated by a dot: ");
-      bid = this.inputManager.getFloatFromClient(input);
-      server.addBuyerForDoubleAuction(this.userId, type, bid);
-      System.out.println("[DOUBLE AUCTION INFO]: Bid placed succesfully.\n");
-
-    } catch (Exception e) {
-      System.out.println("ERROR: Connecting to the server. Try again...");
-      return;
-    }
-  }
 
   /*
-   *
+   * Double auction options menu
    */
   public void viewDoubleAuction(IAuctionSystem server, Scanner input) {
     Integer operation = 0;
@@ -353,6 +334,11 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
 
+  /*
+   * Return a list of all auctioned items (forward auction)
+   *
+   * Can additionally select an item to operate on
+   */
   public void viewItems(IAuctionSystem server, Scanner input) {
     try {
       System.out.println("Retreiving available items...\n");
@@ -395,6 +381,9 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     return;
   }
 
+  /*
+   * Execute operation on a specific item (forward + reverse auction)
+   * */
   public void executeItemOperation(Integer operation, Integer selectedId,
                                    IAuctionSystem server, Scanner input) {
     try {
@@ -419,6 +408,9 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     }
   }
 
+  /*
+   * Place a bid on a selected item (forward + reverse auction)
+   */
   public void placeBid(IAuctionSystem server, Scanner input, Integer idToBid) {
     System.out.print(
         "\nPlease, type the ammount of money (EUR) of your bid."
@@ -451,8 +443,40 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   }
 
   /*
+   * Place a bid on a double auction
+   */
+  public void placeBidDoubleAuction(IAuctionSystem server, Scanner input) {
+    String type = null;
+    Float bid = null;
+    try {
+      System.out.println(server.retrieveItemTypes());
+      System.out.print("Select the type of your item among the list: ");
+      while(true) {
+        type = this.inputManager.getStringFromClient(input);
+        if (server.itemTypeExists(type)) {
+          break;
+        }
+        System.out.print("Type does not exist. Try again: ");
+      }
+
+      System.out.print(
+          "\nPlease, type the ammount of money (EUR) of your bid."
+          + "\nNote - decimal cents (if any) must be separated by a dot: ");
+      bid = this.inputManager.getFloatFromClient(input);
+      server.addBuyerForDoubleAuction(this.userId, type, bid);
+      System.out.println("[DOUBLE AUCTION INFO]: Bid placed succesfully.\n");
+
+    } catch (Exception e) {
+      System.out.println("ERROR: Connecting to the server. Try again...");
+      return;
+    }
+  }
+
+  /*
    * Closes an auction created, if any.
    * (user's personal auctions)
+r  *
+   * Not valid for double auction items.
    */
   public void closeAuction(IAuctionSystem server, Scanner input) {
     listPersonalAuctions();

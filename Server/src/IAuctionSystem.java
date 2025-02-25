@@ -1,16 +1,19 @@
 import java.rmi.Remote;
-import java.util.List;
 import java.rmi.RemoteException;
+import java.util.List;
 
+/*
+ * Remote object acting as auction server stub
+ */
 public interface IAuctionSystem extends Remote {
 
   public AuctionListing openAuction(Integer userId, String itName,
-                                    String itType, String itDesc,
-                                    Integer itCond, Float resPrice,
-                                    Float startPrice) throws RemoteException;
+      String itType, String itDesc,
+      Integer itCond, Float resPrice,
+      Float startPrice) throws RemoteException;
 
   public AuctionListing closeAuction(Integer listingId, String itemType,
-                                     Integer userId) throws RemoteException;
+      Integer userId) throws RemoteException;
 
   public AuctionItem getSpec(Integer itemId, String clientId)
       throws RemoteException;
@@ -38,19 +41,19 @@ public interface IAuctionSystem extends Remote {
 
   // Double Auctions
   public void addSellerForDoubleAuction(Integer userId, String itemName,
-                                        String itemType, String itemDesc,
-                                        Integer itemCond, Float resPrice,
-                                        Float startPrice)
+      String itemType, String itemDesc,
+      Integer itemCond, Float resPrice,
+      Float startPrice)
       throws RemoteException;
 
   public void addBuyerForDoubleAuction(Integer userId, String itemType,
-                                       Float bid) throws RemoteException;
+      Float bid) throws RemoteException;
 
-  public List<byte[]> verifyClientSignature(byte[] encryptedAES,
-                                      byte[] encryptedSignature,
-                                      String originalMessage, Integer userId,
-                                      String originalSignatureHashDigest)
+  public List<byte[]> verifyClientSignature(byte[] encryptedAES, byte[] encryptedSignature,
+      String originalMessage, Integer userId,
+      String originalSignatureHashDigest)
       throws RemoteException;
 
-  public void registerSubscriber(Integer userId, IAuctionSubscriber subscriber) throws RemoteException;
+  public void registerSubscriber(Integer userId, IAuctionSubscriber subscriber)
+      throws RemoteException;
 }

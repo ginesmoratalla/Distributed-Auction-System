@@ -1,5 +1,8 @@
 import java.util.Scanner;
 
+/*
+ * Input manager for client's stdin commands
+*/
 public class ClientInputManager {
 
   public String getStringFromClient(Scanner input) {

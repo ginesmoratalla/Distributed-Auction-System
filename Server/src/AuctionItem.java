@@ -9,6 +9,9 @@ public class AuctionItem implements Serializable {
   private String itemType;
 
 
+  /*
+   * Class representing an auctioned item
+   */
   public AuctionItem(Integer itemId, String itemTitle, String itemType, String itemDescription,
                      Integer conditionScale)
   {

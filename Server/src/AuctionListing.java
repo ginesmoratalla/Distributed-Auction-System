@@ -10,6 +10,11 @@ public class AuctionListing implements Serializable {
   private Boolean auctionOpen;
   private String auctionLogs;
 
+  /*
+   * Auction listing for forward, reverse and double auction
+   *
+   * Includes item, listing prices and logs
+   */
   public AuctionListing(AuctionItem item, Float startingPrice,
                         Float reservePrice) {
 

@@ -6,6 +6,11 @@ public class AuctionUser {
   private String password;
   private PublicKey publicKey;
 
+  /*
+   * Server's representation of an auction user
+   *
+   * Handle's clients private information in the server
+   */
   public AuctionUser(Integer userId, String userName, String password,
                      PublicKey publicKey) {
 

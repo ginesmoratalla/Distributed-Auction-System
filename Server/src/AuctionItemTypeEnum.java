@@ -1,3 +1,7 @@
+
+/*
+ * Enum representing item categories
+ */
 public enum AuctionItemTypeEnum {
   COMPUTER("Computer"),
   BOOK("Book"),
