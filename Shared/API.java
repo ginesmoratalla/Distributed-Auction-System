@@ -5,7 +5,7 @@ import java.util.List;
 /*
  * Remote object acting as auction server stub
  */
-public interface IAuctionSystem extends Remote {
+public interface API extends Remote {
 
   public AuctionListing openAuction(Integer userId, String itName,
       String itType, String itDesc,
@@ -21,7 +21,7 @@ public interface IAuctionSystem extends Remote {
   public Integer addUser(String userName, byte[] userPublicKey)
       throws RemoteException;
 
-  public void placeBid(Integer userId, Integer auctionListingId, Float bid)
+  public Boolean placeBid(Integer userId, Integer auctionListingId, Float bid)
       throws RemoteException;
 
   public Boolean isBidPriceAcceptable(Integer id, Float price)

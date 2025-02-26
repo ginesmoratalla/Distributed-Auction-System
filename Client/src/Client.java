@@ -17,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 // Misc imports
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 
 
@@ -46,7 +45,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
     Scanner input = new Scanner(System.in);
     while (true) {
       try {
-        IAuctionSystem server = connectToServer("LZSCC.311 auction server");
+        API server = connectToServer("LZSCC.311 auction server");
         System.out.print("\nPlease, type your username: ");
         String uName = null;
         while (true) {
@@ -94,11 +93,11 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
    * Connect to RMI registry and get server stub
    *
    */
-  public static IAuctionSystem connectToServer(String name)
+  public static API connectToServer(String name)
       throws RemoteException {
     try {
       Registry registry = LocateRegistry.getRegistry("localhost");
-      IAuctionSystem stub = (IAuctionSystem) registry.lookup(name);
+      API stub = (API) registry.lookup(name);
       System.out.println("Connected to server \"" + name + "\"");
       return stub;
     } catch (Exception e) {
@@ -113,7 +112,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
    * Executes the function logic corresponding to the user's selected
    * operaiton.
    */
-  public boolean execOperation(Integer op, IAuctionSystem server, Scanner input)
+  public boolean execOperation(Integer op, API server, Scanner input)
       throws RemoteException {
     switch (op) {
     case 0:
@@ -151,7 +150,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Returns item details from server (forward + reverse auction)
    */
-  public void getItemSpec(IAuctionSystem server, Scanner input, Integer itemId)
+  public void getItemSpec(API server, Scanner input, Integer itemId)
       throws RemoteException
   {
     try {
@@ -179,7 +178,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Create auction listing (valid for all auction types)
    */
-  public void createAuction(IAuctionSystem server, Scanner input, Boolean isDoubleAuction) {
+  public void createAuction(API server, Scanner input, Boolean isDoubleAuction) {
 
     System.out.print("\nCreating new auction...\nWhat is the name of your item? ");
     String name = this.inputManager.getStringFromClient(input);
@@ -241,7 +240,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Return items filtered by category
    */
-  public void viewReverseAuction(IAuctionSystem server, Scanner input) {
+  public void viewReverseAuction(API server, Scanner input) {
     String type = null;
     Integer idToView = null;
     try {
@@ -276,7 +275,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Executes an operation from a double auction
    */
-  public void doubleAuctionOperation (IAuctionSystem server, Scanner input, Integer operation) {
+  public void doubleAuctionOperation (API server, Scanner input, Integer operation) {
     try {
       switch (operation) {
       case 1:
@@ -301,7 +300,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Double auction options menu
    */
-  public void viewDoubleAuction(IAuctionSystem server, Scanner input) {
+  public void viewDoubleAuction(API server, Scanner input) {
     Integer operation = 0;
     System.out.println(ClientInputManager.DOUBLE_AUCTION_OPERATIONS);
     System.out.print("Please, select an operation: ");
@@ -315,7 +314,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
    *
    * Can additionally select an item to operate on
    */
-  public void viewItems(IAuctionSystem server, Scanner input) {
+  public void viewItems(API server, Scanner input) {
     try {
       System.out.println("Retreiving available items...\n");
       String auctionedItems = server.getAuctionedItems();
@@ -356,7 +355,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
    * Execute operation on a specific item (forward + reverse auction)
    * */
   public void executeItemOperation(Integer operation, Integer selectedId,
-                                   IAuctionSystem server, Scanner input) {
+                                   API server, Scanner input) {
     try {
       switch (operation) {
       case 1:
@@ -382,7 +381,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Place a bid on a selected item (forward + reverse auction)
    */
-  public void placeBid(IAuctionSystem server, Scanner input, Integer idToBid) {
+  public void placeBid(API server, Scanner input, Integer idToBid) {
     System.out.print(
         "\nPlease, type the ammount of money (EUR) of your bid."
         + "\nNote - decimal cents (if any) must be separated by a dot: ");
@@ -415,7 +414,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
   /*
    * Place a bid on a double auction
    */
-  public void placeBidDoubleAuction(IAuctionSystem server, Scanner input) {
+  public void placeBidDoubleAuction(API server, Scanner input) {
     String type = null;
     Float bid = null;
     try {
@@ -448,7 +447,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
 r  *
    * Not valid for double auction items.
    */
-  public void closeAuction(IAuctionSystem server, Scanner input) {
+  public void closeAuction(API server, Scanner input) {
     listPersonalAuctions();
     if (this.userAuctions.isEmpty()) return;
 
@@ -502,7 +501,7 @@ r  *
    * Two-way digital signature handshake to verify server's identity.
    * Hybrid encripyion -> symmetric AES key + asymmetric RSA signature.
    */
-  private static Boolean verifyServerSignature(IAuctionSystem stub, String userName,
+  private static Boolean verifyServerSignature(API stub, String userName,
         KeyPair userKeyPair, PublicKey serverPubKey, Integer userId) {
 
     System.out.println("[SECURITY] Verifying server identity...");

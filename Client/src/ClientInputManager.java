@@ -16,6 +16,7 @@ public class ClientInputManager {
       + "\n3. Select forward auction mode"
       + "\n4. Select reverse auction mode"
       + "\n5. Select double auction mode"
+      + "\n6. Add backend replica"
       + "\n0. Exit"
       + "\n--------------------------------"
       + "\n--------------------------------"
