@@ -1,6 +1,7 @@
+import java.io.Serializable;
 import java.security.PublicKey;
 
-public class AuctionUser {
+public class AuctionUser implements Serializable {
   private Integer userId;
   private String userName;
   private String password;
@@ -11,8 +12,7 @@ public class AuctionUser {
    *
    * Handle's clients private information in the server
    */
-  public AuctionUser(Integer userId, String userName, String password,
-                     PublicKey publicKey) {
+  public AuctionUser(Integer userId, String userName, String password, PublicKey publicKey) {
 
     this.userId = userId;
     this.userName = userName;

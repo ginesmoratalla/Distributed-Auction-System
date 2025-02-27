@@ -80,7 +80,7 @@ public class AuctionServerFrontend implements API {
   public static void main(String[] args) {
     try {
       new AuctionServerFrontend();
-      System.out.println("> Frontend server ready");
+      System.out.println("✅ Frontend server ready");
     } catch (Exception e) {
       System.err.println("🆘 remote exception:");
       e.printStackTrace();
@@ -138,7 +138,7 @@ public class AuctionServerFrontend implements API {
    */
   public void registerSubscriber(Integer userId, IAuctionSubscriber subscriber) throws RemoteException {
     this.subscriberList.put(userId, subscriber);
-    System.out.println("> User with ID" + userId + " registered as subscriber");
+    System.out.println("✅ User with ID " + userId + " registered as subscriber");
   }
 
   /*
@@ -148,6 +148,7 @@ public class AuctionServerFrontend implements API {
    *
    */
   public String retrieveItemTypes() throws RemoteException {
+    System.out.println("📩 retrieveItemTypes() function request via rmi\n");
     String formattedString = "\n--- Item Types ---\n------------------\n";
     for (AuctionItemTypeEnum type : AuctionItemTypeEnum.values()) {
       formattedString += "> " + type.getValue() + "\n";
@@ -182,22 +183,24 @@ public class AuctionServerFrontend implements API {
    * User random ID is created ensuring mutex.
    */
   public Integer addUser(String userName, byte[] userPublicKeyEncoded) throws RemoteException {
+    System.out.println("📩 addUser() function request via rmi\n");
     Integer userId = random.nextInt(1000);
     while (true) {
-      userId = random.nextInt();
+      userId = random.nextInt(1000);
       try {
         RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "proposedIdExistsBackend",
           new Object[] { userId }, new Class[] { Integer.class },
           new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-        if (!matchAllReplicaResponses(responses)) break;
+        if (!matchAllReplicaResponses(responses)) { break; }
       } catch (Exception e) {
         System.err.println("🆘 addUser() -> checking for ID. dispatcher exception:");
         e.printStackTrace();
       }
     }
     try {
+      System.out.printf("✅ ID validated, proceding to add user (%d, %s) to the database\n", userId, userName);
       RspList<Integer> responses = this.dispatcher.callRemoteMethods(null, "addUserBackend",
-        new Object[] { userName, userId, userPublicKeyEncoded }, new Class[] { String.class, Integer.class, byte[].class },
+        new Object[] { userId, userName, userPublicKeyEncoded }, new Class[] { Integer.class, String.class, byte[].class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
       return matchAllReplicaResponses(responses);
     } catch (Exception e) {
@@ -213,6 +216,7 @@ public class AuctionServerFrontend implements API {
    * Adds an auction listing to a list of double auctions by item type.
    */
   public void addBuyerForDoubleAuction(Integer userId, String itemType, Float bid) throws RemoteException {
+    System.out.println("📩 addBuyerForDoulbeAuction() function request via rmi\n");
     try {
       RspList<HashMap<Integer, HashMap<Integer, String>>> responses = this.dispatcher.callRemoteMethods(null, "addBuyerForDoubleAuctionBackend",
         new Object[] { userId, itemType, bid },
@@ -238,6 +242,7 @@ public class AuctionServerFrontend implements API {
                                         Integer itemCond, Float resPrice,
                                         Float startPrice) throws RemoteException {
 
+    System.out.println("📩 addSellerForDoulbeAuction() function request via rmi\n");
     try {
       RspList<HashMap<Integer, HashMap<Integer, String>>> responses = this.dispatcher.callRemoteMethods(null, "addSellerForDoubleAuctionBackend",
         new Object[] { userId, itemName, itemType, itemDesc, itemCond, resPrice, startPrice },
@@ -262,6 +267,7 @@ public class AuctionServerFrontend implements API {
    */
   public AuctionListing closeAuction(Integer listingId, String itemType,
                                      Integer userId) throws RemoteException {
+    System.out.println("📩 closeAuction() function request via rmi\n");
     try {
       RspList<AuctionListing> responses = this.dispatcher.callRemoteMethods(null, "closeAuctionBackend",
         new Object[] { listingId, itemType, userId }, new Class[] { Integer.class, String.class, Integer.class },
@@ -283,6 +289,7 @@ public class AuctionServerFrontend implements API {
       Integer userId, String itName, String itType, String itDesc,
       Integer itCond, Float resPrice, Float startPrice
   ) throws RemoteException {
+    System.out.println("📩 openAuction() function request via rmi\n");
     try {
       RspList<AuctionListing> responses = this.dispatcher.callRemoteMethods(null, "openAuctionBackend",
         new Object[] { userId, itName, itType, itDesc, itCond, resPrice, startPrice }, new Class[]
@@ -307,6 +314,7 @@ public class AuctionServerFrontend implements API {
    * of a specific type.
    */
   public String retrieveItemsByType(String type) throws RemoteException {
+    System.out.println("📩 retrieveItemsByType() function request via rmi\n");
     try {
       RspList<String> responses = this.dispatcher.callRemoteMethods(null, "retrieveItemsByTypeBackend",
         new Object[] { type }, new Class[] { String.class },
@@ -325,6 +333,7 @@ public class AuctionServerFrontend implements API {
    * Return details from a requested item by ID.
    */
   public AuctionItem getSpec(Integer itemId, String clientId) throws RemoteException {
+    System.out.println("📩 getSpec() function request via rmi\n");
     try {
       RspList<AuctionItem> responses = this.dispatcher.callRemoteMethods(null, "getSpecBackend",
         new Object[] { itemId, clientId }, new Class[] { Integer.class, String.class },
@@ -344,6 +353,7 @@ public class AuctionServerFrontend implements API {
    * @return Boolean: whether the bid was placed succesfully (auction ID exists)
    */
   public Boolean placeBid(Integer userId, Integer auctionListingId, Float bid) throws RemoteException {
+    System.out.println("📩 placeBid() function request via rmi\n");
     try {
       RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "placeBidBackend",
         new Object[] { userId, auctionListingId, bid }, new Class[] { Integer.class, Integer.class, Float.class },
@@ -362,6 +372,7 @@ public class AuctionServerFrontend implements API {
    * Checks whether an id is amongst existing auctions.
    */
   public Boolean idMatchesExistingItem(Integer id) throws RemoteException {
+    System.out.println("📩 idMatchesExistingItem() function request via rmi\n");
     try {
       RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "idMatchesExistingItemBackend",
         new Object[] { id }, new Class[] { Integer.class },
@@ -381,6 +392,7 @@ public class AuctionServerFrontend implements API {
    */
   public Boolean isBidPriceAcceptable(Integer listingId, Float price)
       throws RemoteException {
+    System.out.println("📩 isBidPriceAcceptable() function request via rmi\n");
     try {
       RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "isBidPriceAcceptableBackend",
         new Object[] { listingId, price }, new Class[] { Integer.class, Float.class },
@@ -399,6 +411,7 @@ public class AuctionServerFrontend implements API {
    * Sends complete list of auctioned items (forward auction)
    */
   public String getAuctionedItems() throws RemoteException {
+    System.out.println("📩 getAuctionedItems() function request via rmi\n");
     try {
       RspList<String> responses = this.dispatcher.callRemoteMethods(null, "getAuctionedItemsBackend",
         new Object[] {}, new Class[] {},
@@ -428,7 +441,9 @@ public class AuctionServerFrontend implements API {
    * Check whether replicas return the same response
    */
   private <T> T matchAllReplicaResponses(RspList<T> responses) {
-    if (responses.isEmpty()) return null;
+    if (responses.isEmpty()) {
+      return null;
+    }
     T firstResponse = responses.getFirst();
     for (T response : responses.getResults()) {
       if (!firstResponse.equals(response)) {
@@ -448,6 +463,7 @@ public class AuctionServerFrontend implements API {
    */
   public List<byte[]> verifyClientSignature(byte[] encryptedAES, byte[] encryptedSignature,
     String originalMessage, Integer userId, String originalSignatureHashDigest) throws RemoteException {
+    System.out.println("📩 verifyClientSignature() function request via rmi\n");
     CryptoManager cryptoManager = new CryptoManager();
     Cipher cipher;
     Signature signature;

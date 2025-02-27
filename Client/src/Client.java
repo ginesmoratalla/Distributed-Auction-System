@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
-
 /**
  * Auction Client
  */
@@ -395,7 +394,7 @@ public class Client extends UnicastRemoteObject implements IAuctionSubscriber {
         }
         break;
       } catch (Exception e) {
-        System.out.print("[ERROR]: Not a valid input type, please try again: ");
+        System.out.println("[ERROR] Connecting to the server. Bid was not placed");
       }
     }
     try {

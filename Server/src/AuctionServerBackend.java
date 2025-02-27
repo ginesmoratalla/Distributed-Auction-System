@@ -15,9 +15,6 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 
-// Misc imports
-import java.util.Random;
-
 public class AuctionServerBackend {
 
   private HashMap<String, HashMap<Integer, AuctionListing>> auctionList;
@@ -56,7 +53,6 @@ public class AuctionServerBackend {
    * Adds aucitoned item listing to server's global list
    */
   private AuctionListing addListing(AuctionListing listing) {
-    this.requestCount++;
     String itemType = listing.getItem().getItemType().toLowerCase();
     this.auctionList
         .computeIfAbsent(itemType, k -> new HashMap<Integer, AuctionListing>())
@@ -71,11 +67,13 @@ public class AuctionServerBackend {
    */
   public Boolean userNameExistsBackend(String userName) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for userNameExists() | total requests: %d\n", this.requestCount);
     return this.userNames.contains(userName);
   }
 
   public Boolean proposedIdExistsBackend(Integer proposedId) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for proposedIdExists() | total requests: %d\n", this.requestCount);
     return this.userList.containsKey(proposedId);
   }
 
@@ -83,18 +81,17 @@ public class AuctionServerBackend {
    * Method for RMI
    *
    * Creates and adds user ID to server's user list.
-   * User random ID is created ensuring mutex.
    */
   public Integer addUserBackend(Integer proposedId, String userName, byte[] userPublicKeyEncoded) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for addUser() | total requests: %d\n", this.requestCount);
     try {
-      System.out.println("> User " + userName + " got assigned ID " + proposedId);
+      System.out.println("[BACKEND LOG] User " + userName + " got assigned ID " + proposedId);
       PublicKey userPublicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(userPublicKeyEncoded));
-      this.userList.put(proposedId,
-                        new AuctionUser(proposedId, userName, "NO_PASSWORD_YET", userPublicKey));
+      this.userList.put(proposedId, new AuctionUser(proposedId, userName, "NO_PASSWORD_YET", userPublicKey));
       this.userNames.add(userName);
     } catch (Exception e) {
-      System.out.println("ERROR: Deserializing user public key.");
+      System.out.println("[BACKEND ERROR]: Deserializing user public key.");
     }
     return proposedId;
   }
@@ -106,6 +103,7 @@ public class AuctionServerBackend {
    */
   public HashMap<Integer, HashMap<Integer, String>> addBuyerForDoubleAuctionBackend(Integer userId, String itemType, Float bid) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for addBuyerForDoulbeAuction() | total requests: %d\n", this.requestCount);
     DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
         itemType.toLowerCase(), k -> new DoubleAuction(itemType));
     doubleAuciton.addBuyer(this.userList.get(userId), bid);
@@ -129,6 +127,7 @@ public class AuctionServerBackend {
                                         Float startPrice)
   {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for addSellerForDoubleAuction() | total requests: %d\n", this.requestCount);
     DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
         itemType.toLowerCase(), k -> new DoubleAuction(itemType));
 
@@ -154,6 +153,7 @@ public class AuctionServerBackend {
   public AuctionListing closeAuctionBackend(Integer listingId, String itemType,
                                      Integer userId) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for closeAuction() | total requests: %d\n", this.requestCount);
     String itemLowerCase = itemType.toLowerCase();
     if (this.auctionList.containsKey(itemLowerCase) &&
         this.auctionList.get(itemLowerCase).containsKey(listingId)) {
@@ -177,6 +177,7 @@ public class AuctionServerBackend {
                                     Integer itCond, Float resPrice,
                                     Float startPrice) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for openAuction() | total requests: %d\n", this.requestCount);
     AuctionItem item = new AuctionItem(assignItemId(), itName, itType, itDesc, itCond);
     AuctionListing listing =
         addListing(new AuctionListing(item, startPrice, resPrice));
@@ -194,6 +195,7 @@ public class AuctionServerBackend {
    */
   public String retrieveItemsByTypeBackend(String type) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for retrieveItemsByType() | total requests: %d\n", this.requestCount);
     if (!this.auctionList.containsKey(type.toLowerCase()) || this.auctionList.get(type.toLowerCase()).size() == 0)
       return null;
 
@@ -222,6 +224,7 @@ public class AuctionServerBackend {
    */
   public AuctionItem getSpecBackend(Integer itemId, String clientId) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for getSpec() | total requests: %d\n", this.requestCount);
     System.out.println("> User " + clientId + " requested item " + itemId);
 
     for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
@@ -245,6 +248,7 @@ public class AuctionServerBackend {
    */
   public Boolean placeBidBackend(Integer userId, Integer auctionListingId, Float bid) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for placeBid() | total requests: %d\n", this.requestCount);
     for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry : this.auctionList.entrySet()) {
       if (entry.getValue().containsKey(auctionListingId)) {
         AuctionListing auctionListing = entry.getValue().get(auctionListingId);
@@ -275,6 +279,7 @@ public class AuctionServerBackend {
    */
   public Boolean idMatchesExistingItemBackend(Integer id) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for idMatchesExistingItem() | total requests: %d\n", this.requestCount);
     for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
          this.auctionList.entrySet()) {
       if (entry.getValue().containsKey(id))
@@ -288,8 +293,9 @@ public class AuctionServerBackend {
    *
    * Checks if the price prompted by a buyer exceeds the starting/current price for item
    */
-  public Boolean isBidPriceAcceptableBackende(Integer listingId, Float price) {
+  public Boolean isBidPriceAcceptableBackend(Integer listingId, Float price) {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for isBidPriceAcceptable() | total requests: %d\n", this.requestCount);
     for (Map.Entry<String, HashMap<Integer, AuctionListing>> entry :
          this.auctionList.entrySet()) {
       if (entry.getValue().containsKey(listingId)) {
@@ -306,6 +312,9 @@ public class AuctionServerBackend {
   }
 
   public AuctionUser getUserByInt(Integer userId) {
+    this.requestCount++;
+    System.out.printf("📩 Frontend request for getUserByInt() | total requests: %d\n", this.requestCount);
+    System.out.println("✅ User with ID " + userId + " -> " + this.userList.get(userId));
     return this.userList.get(userId);
   }
 
@@ -316,6 +325,7 @@ public class AuctionServerBackend {
    */
   public String getAuctionedItemsBackend() {
     this.requestCount++;
+    System.out.printf("📩 Frontend request for getAuctionedItems() | total requests: %d\n", this.requestCount);
     if (this.auctionList.isEmpty() || this.auctionList.values().stream().allMatch(Map::isEmpty))
       return null;
 
@@ -349,6 +359,6 @@ public class AuctionServerBackend {
    */
   public static void main(String[] args) {
     new AuctionServerBackend();
-    System.out.println("> Backend server replica ready");
+    System.out.println("✅ Backend replica ready");
   }
 }
