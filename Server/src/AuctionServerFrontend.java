@@ -3,6 +3,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+
 // Data structs
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +21,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 
+// JGroups
 import org.jgroups.JChannel;
 import org.jgroups.blocks.RequestOptions;
 import org.jgroups.blocks.ResponseMode;
@@ -32,46 +34,34 @@ import java.util.Random;
 public class AuctionServerFrontend implements API {
 
   private HashMap<Integer, IAuctionSubscriber> subscriberList;
-  private static Registry registry;
+  private HashSet<String> userNames;
   private Random random;
 
   private PrivateKey privateKey;
   private PublicKey publicKey;
 
-  private JChannel groupChannel;
-  private RpcDispatcher dispatcher;
   private final int DISPATCHER_TIMEOUT = 1000;
   public final String SERVER_NAME = "LZSCC.311 auction server";
+  private static Registry registry;
+  private JChannel groupChannel;
+  private RpcDispatcher dispatcher;
 
   public AuctionServerFrontend() {
     super();
+    this.userNames = new HashSet<String>();
+    this.subscriberList = new HashMap<Integer, IAuctionSubscriber>();
+
     this.publicKey = CryptoManager.loadPublicKey("../keys/server_auction_rsa.pub");
     this.privateKey = CryptoManager.loadPrivateKey("../keys/server_auction_rsa");
     this.random = new Random();
-    this.subscriberList = new HashMap<Integer, IAuctionSubscriber>();
     this.groupChannel = GroupUtils.connect();
+
     if (this.groupChannel == null) {
       System.exit(1);
     }
     this.bind(this.SERVER_NAME);
     this.dispatcher = new RpcDispatcher(this.groupChannel, this);
     this.dispatcher.setMembershipListener(new MembershipListener());
-  }
-
-  /*
-   * Bind this frontend with RMI Registry
-   * */
-  private void bind(String serverName) {
-    try {
-      API remoteObject = (API) UnicastRemoteObject.exportObject(this, 0);
-      registry = LocateRegistry.getRegistry();
-      registry.rebind(serverName, remoteObject);
-      System.out.println("✅ rmi server running...");
-    } catch (Exception e) {
-      System.err.println("🆘 exception:");
-      e.printStackTrace();
-      System.exit(1);
-    }
   }
 
   /*
@@ -89,18 +79,33 @@ public class AuctionServerFrontend implements API {
   }
 
   /*
+   * Bind this frontend with RMI Registry
+   * */
+  private void bind(String serverName) {
+    try {
+      API remoteObject = (API) UnicastRemoteObject.exportObject(this, 0);
+      registry = LocateRegistry.getRegistry();
+      registry.rebind(serverName, remoteObject);
+      System.out.println("✅ rmi server running...");
+    } catch (Exception e) {
+      System.err.println("🆘 remote exception:");
+      e.printStackTrace();
+      System.exit(1);
+    }
+  }
+
+  /*
    * Method for RMI
    *
-   * Checks for an existing entry among types of items
+   * Checks whether a username is used.
    */
-  public Boolean itemTypeExists(String typeStr) throws RemoteException {
-    String lowerCaseString = typeStr.toLowerCase();
-    for (AuctionItemTypeEnum type : AuctionItemTypeEnum.values()) {
-      if (type.getValue().toLowerCase().equals(lowerCaseString))
-        return true;
-    }
-    return false;
+  public Boolean userNameExists(String userName) throws RemoteException {
+    System.out.printf("📩 rmi request for userNameExists()\n");
+    Boolean userNameExists = this.userNames.contains(userName);
+    if (!userNameExists) this.userNames.add(userName);
+    return userNameExists;
   }
+
 
   /*
    * Sends result message from double auction to client (Pub-Sub)
@@ -144,6 +149,20 @@ public class AuctionServerFrontend implements API {
   /*
    * Method for RMI
    *
+   * Checks for an existing entry among types of items
+   */
+  public Boolean itemTypeExists(String typeStr) throws RemoteException {
+    String lowerCaseString = typeStr.toLowerCase();
+    for (AuctionItemTypeEnum type : AuctionItemTypeEnum.values()) {
+      if (type.getValue().toLowerCase().equals(lowerCaseString))
+        return true;
+    }
+    return false;
+  }
+
+  /*
+   * Method for RMI
+   *
    * Returs a formatted list of item types (for reverse auctions)
    *
    */
@@ -155,25 +174,6 @@ public class AuctionServerFrontend implements API {
     }
     formattedString += "\nRESPECT SPACES WHEN TYPING ITEM TYPE\n";
     return formattedString;
-  }
-
-  /*
-   * Method for RMI
-   *
-   * Checks whether a username is used.
-   */
-  public Boolean userNameExists(String userName) throws RemoteException {
-    System.out.println("📩 UserNameExists() function request via rmi\n");
-    try {
-      RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "userNameExistsBackend",
-        new Object[] { userName }, new Class[] { String.class },
-        new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
-    } catch (Exception e) {
-      System.err.println("🆘 userNameExist() dispatcher exception:");
-      e.printStackTrace();
-    }
-    return null;
   }
 
   /*

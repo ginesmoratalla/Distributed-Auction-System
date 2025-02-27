@@ -20,7 +20,6 @@ public class GroupUtils {
     } catch (Exception e) {
       System.err.printf("🆘 could not connect to jgroups channel: %s\n", channelName);
     }
-
     return null;
   }
 }

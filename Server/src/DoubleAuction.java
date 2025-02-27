@@ -1,10 +1,11 @@
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Random;
 
-public class DoubleAuction {
+public class DoubleAuction implements Serializable {
 
   private String auctionItemType;
   private Integer buyerCount;

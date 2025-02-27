@@ -4,12 +4,14 @@ import java.rmi.registry.Registry;
 
 // Data structs
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 import org.jgroups.JChannel;
+import org.jgroups.blocks.RequestOptions;
+import org.jgroups.blocks.ResponseMode;
 import org.jgroups.blocks.RpcDispatcher;
+import org.jgroups.util.RspList;
 
 import java.security.KeyFactory;
 import java.security.PublicKey;
@@ -17,37 +19,39 @@ import java.security.spec.X509EncodedKeySpec;
 
 public class AuctionServerBackend {
 
-  private HashMap<String, HashMap<Integer, AuctionListing>> auctionList;
-  private HashMap<String, DoubleAuction> doubleAuctionList;
-  private static Integer globalId = 0;
+  private HashMap<String, HashMap<Integer, AuctionListing>> auctionList = null;
+  private HashMap<String, DoubleAuction> doubleAuctionList = null;
+  private HashMap<Integer, AuctionUser> userList = null;
 
-  private HashMap<Integer, AuctionUser> userList;
-  private HashSet<String> userNames;
   private int requestCount;
+  private static Integer globalId = null;
+  private final int DISPATCHER_TIMEOUT = 1000;
 
   private JChannel groupChannel;
   private RpcDispatcher dispatcher;
 
   public AuctionServerBackend() {
+
+    this.groupChannel = GroupUtils.connect();
+    if (this.groupChannel == null) { System.exit(1); }
+    this.dispatcher = new RpcDispatcher(this.groupChannel, this);
+
     this.auctionList = new HashMap<String, HashMap<Integer, AuctionListing>>();
     this.doubleAuctionList = new HashMap<String, DoubleAuction>();
     this.userList = new HashMap<Integer, AuctionUser>();
-    this.userNames = new HashSet<String>();
     this.requestCount = 0;
-
-    this.groupChannel = GroupUtils.connect();
-    if (this.groupChannel == null) {
-      System.exit(1);
+    try {
+      syncBackendState();
+    } catch (Exception e) {
+      e.printStackTrace();
     }
-    this.dispatcher = new RpcDispatcher(this.groupChannel, this);
   }
 
-  /*
+  /**
    * Adds item to server's global list
-   *
-   * Global ID is updated ensuring mutex.
+   * @return Global ID
    */
-  private synchronized Integer assignItemId() { return globalId++; }
+  private Integer assignItemId() { return globalId++; }
 
   /*
    * Adds aucitoned item listing to server's global list
@@ -60,16 +64,6 @@ public class AuctionServerBackend {
     return listing;
   }
 
-  /*
-   * Method for RMI
-   *
-   * Checks whether a username is used.
-   */
-  public Boolean userNameExistsBackend(String userName) {
-    this.requestCount++;
-    System.out.printf("📩 Frontend request for userNameExists() | total requests: %d\n", this.requestCount);
-    return this.userNames.contains(userName);
-  }
 
   public Boolean proposedIdExistsBackend(Integer proposedId) {
     this.requestCount++;
@@ -89,7 +83,6 @@ public class AuctionServerBackend {
       System.out.println("[BACKEND LOG] User " + userName + " got assigned ID " + proposedId);
       PublicKey userPublicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(userPublicKeyEncoded));
       this.userList.put(proposedId, new AuctionUser(proposedId, userName, "NO_PASSWORD_YET", userPublicKey));
-      this.userNames.add(userName);
     } catch (Exception e) {
       System.out.println("[BACKEND ERROR]: Deserializing user public key.");
     }
@@ -128,9 +121,7 @@ public class AuctionServerBackend {
   {
     this.requestCount++;
     System.out.printf("📩 Frontend request for addSellerForDoubleAuction() | total requests: %d\n", this.requestCount);
-    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(
-        itemType.toLowerCase(), k -> new DoubleAuction(itemType));
-
+    DoubleAuction doubleAuciton = this.doubleAuctionList.computeIfAbsent(itemType.toLowerCase(), k -> new DoubleAuction(itemType));
     AuctionItem item = new AuctionItem(assignItemId(), itemName, itemType.toLowerCase(), itemDesc, itemCond);
     AuctionListing listing = new AuctionListing(item, startPrice, resPrice);
     doubleAuciton.addSeller(this.userList.get(userId), listing);
@@ -354,6 +345,7 @@ public class AuctionServerBackend {
     strToStd += "|----------------------------------------------------|\n";
     return strToStd;
   }
+
   /*
    * Server initiation.
    */
@@ -361,4 +353,130 @@ public class AuctionServerBackend {
     new AuctionServerBackend();
     System.out.println("✅ Backend replica ready");
   }
+
+  public HashMap<String, HashMap<Integer, AuctionListing>> getAuctionListState() {
+    return this.auctionList;
+  }
+
+  public HashMap<String, DoubleAuction> getDoubleAuctionListState() {
+    return this.doubleAuctionList;
+  }
+
+  public HashMap<Integer, AuctionUser> getUserListState() {
+    return this.userList;
+  }
+
+  public Integer getItemCounterId() {
+    return globalId;
+  }
+
+  /**
+   * Gets the state of the Backend Replica up with the rest
+   */
+  public void syncBackendState() throws Exception {
+    System.out.println("📩 Backend replica state organising function request via rmi\n");
+    syncAuctionListState();
+    syncDoubleAuctionListState();
+    syncUserListState();
+    syncCounter();
+  }
+
+  private void syncCounter() {
+    System.out.println("📩 Backend replica state: synchronizing the item counter...\n");
+    try {
+      RspList<Integer> counterState =
+        this.dispatcher.callRemoteMethods(null, "getItemCounterId",
+        new Object[] {},
+        new Class[] {},
+        new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
+      Integer syncedCounter = matchAllReplicaResponses(counterState);
+      if (syncedCounter == null) {
+        globalId = 0;
+      } else {
+        globalId = syncedCounter;
+      }
+    } catch (Exception e) {
+      System.err.println("🆘 Backend replica item counter syncrhonization error - dispatcher exception:");
+      e.printStackTrace();
+    }
+  }
+
+  private void syncUserListState() {
+    System.out.println("📩 Backend replica state: synchronizing the user list...\n");
+    try {
+      RspList<HashMap<Integer, AuctionUser>> userListState =
+        this.dispatcher.callRemoteMethods(null, "getUserListState",
+        new Object[] {},
+        new Class[] {},
+        new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
+      HashMap<Integer, AuctionUser> syncedUserList = matchAllReplicaResponses(userListState);
+      if (syncedUserList == null) {
+        this.userList = new HashMap<Integer, AuctionUser>();
+      } else {
+        this.userList = syncedUserList;
+      }
+    } catch (Exception e) {
+      System.err.println("🆘 Backend replica auction list syncrhonization error - dispatcher exception:");
+      e.printStackTrace();
+    }
+  }
+
+  private void syncAuctionListState() {
+    System.out.println("📩 Backend replica state: synchronizing the auction list...\n");
+    try {
+      RspList<HashMap<String, HashMap<Integer, AuctionListing>>> auctionListState =
+        this.dispatcher.callRemoteMethods(null, "getAuctionListState",
+        new Object[] {},
+        new Class[] {},
+        new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
+
+      HashMap<String, HashMap<Integer, AuctionListing>> syncedAuctions = matchAllReplicaResponses(auctionListState);
+      if (syncedAuctions == null) {
+        this.auctionList = new HashMap<String, HashMap<Integer, AuctionListing>>();
+      } else {
+        this.auctionList = syncedAuctions;
+      }
+    } catch (Exception e) {
+      System.err.println("🆘 Backend replica auction list syncrhonization error - dispatcher exception:");
+      e.printStackTrace();
+    }
+  }
+
+  private void syncDoubleAuctionListState() {
+    System.out.println("📩 Backend replica state: synchronizing the double auction list...\n");
+    try {
+      RspList<HashMap<String, DoubleAuction>> doubleAuctionState =
+        this.dispatcher.callRemoteMethods(null, "getDoubleAuctionListState",
+        new Object[] {},
+        new Class[] {},
+        new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
+      HashMap<String, DoubleAuction> syncedDoubleAuctions = matchAllReplicaResponses(doubleAuctionState);
+      if (syncedDoubleAuctions == null) {
+        this.doubleAuctionList = new HashMap<String, DoubleAuction>();
+      } else {
+        this.doubleAuctionList = syncedDoubleAuctions;
+      }
+    } catch (Exception e) {
+      System.err.println("🆘 Backend replica double auction list syncrhonization error - dispatcher exception:");
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Check whether replicas return the same response
+   */
+  private <T> T matchAllReplicaResponses(RspList<T> responses) {
+    if (responses.isEmpty()) {
+      return null;
+    }
+    T firstResponse = responses.getFirst();
+    for (T response : responses.getResults()) {
+      if (!firstResponse.equals(response)) {
+        return null;
+      }
+    }
+    return firstResponse;
+  }
+
 }
+
