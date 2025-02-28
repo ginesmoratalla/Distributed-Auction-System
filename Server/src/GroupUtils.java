@@ -1,4 +1,5 @@
 import org.jgroups.JChannel;
+import org.jgroups.util.RspList;
 
 public class GroupUtils {
 
@@ -21,5 +22,18 @@ public class GroupUtils {
       System.err.printf("🆘 could not connect to jgroups channel: %s\n", channelName);
     }
     return null;
+  }
+
+  /**
+   * Check whether backend replicas return the same response
+   * @return if consistent across replicas, returns the T object
+   */
+  public static <T> T matchAllReplicaResponses(RspList<T> responses) {
+    if (responses.isEmpty()) return null;
+    T firstResponse = responses.getFirst();
+    for (T response : responses.getResults()) {
+      if (!firstResponse.equals(response)) { return null; }
+    }
+    return firstResponse;
   }
 }

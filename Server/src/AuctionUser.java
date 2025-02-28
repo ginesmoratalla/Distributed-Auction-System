@@ -8,13 +8,12 @@ public class AuctionUser implements Serializable {
   private String password;
   private PublicKey publicKey;
 
-  /*
+  /**
    * Server's representation of an auction user
    *
    * Handle's clients private information in the server
    */
   public AuctionUser(Integer userId, String userName, String password, PublicKey publicKey) {
-
     this.userId = userId;
     this.userName = userName;
     this.password = password;

@@ -191,7 +191,7 @@ public class AuctionServerFrontend implements API {
         RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "proposedIdExistsBackend",
           new Object[] { userId }, new Class[] { Integer.class },
           new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-        if (!matchAllReplicaResponses(responses)) { break; }
+        if (!GroupUtils.matchAllReplicaResponses(responses)) { break; }
       } catch (Exception e) {
         System.err.println("🆘 addUser() -> checking for ID. dispatcher exception:");
         e.printStackTrace();
@@ -202,7 +202,7 @@ public class AuctionServerFrontend implements API {
       RspList<Integer> responses = this.dispatcher.callRemoteMethods(null, "addUserBackend",
         new Object[] { userId, userName, userPublicKeyEncoded }, new Class[] { Integer.class, String.class, byte[].class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 addUser() dispatcher exception:");
       e.printStackTrace();
@@ -222,7 +222,7 @@ public class AuctionServerFrontend implements API {
         new Object[] { userId, itemType, bid },
         new Class[] { Integer.class, String.class, Float.class},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      HashMap<Integer, HashMap<Integer, String>> response = matchAllReplicaResponses(responses);
+      HashMap<Integer, HashMap<Integer, String>> response = GroupUtils.matchAllReplicaResponses(responses);
       if (response != null && !response.isEmpty()) {
         notifyAllDoubleAuctionUsers(response);
       }
@@ -250,7 +250,7 @@ public class AuctionServerFrontend implements API {
                       String.class, String.class,
                       Integer.class, Float.class, Float.class},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      HashMap<Integer, HashMap<Integer, String>> response = matchAllReplicaResponses(responses);
+      HashMap<Integer, HashMap<Integer, String>> response = GroupUtils.matchAllReplicaResponses(responses);
       if (response != null && !response.isEmpty()) {
         notifyAllDoubleAuctionUsers(response);
       }
@@ -272,7 +272,7 @@ public class AuctionServerFrontend implements API {
       RspList<AuctionListing> responses = this.dispatcher.callRemoteMethods(null, "closeAuctionBackend",
         new Object[] { listingId, itemType, userId }, new Class[] { Integer.class, String.class, Integer.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 closeAuction() dispatcher exception:");
       e.printStackTrace();
@@ -299,7 +299,7 @@ public class AuctionServerFrontend implements API {
           Float.class
         },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 openAuction() dispatcher exception:");
       e.printStackTrace();
@@ -319,7 +319,7 @@ public class AuctionServerFrontend implements API {
       RspList<String> responses = this.dispatcher.callRemoteMethods(null, "retrieveItemsByTypeBackend",
         new Object[] { type }, new Class[] { String.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 getSpec() dispatcher exception:");
       e.printStackTrace();
@@ -338,7 +338,7 @@ public class AuctionServerFrontend implements API {
       RspList<AuctionItem> responses = this.dispatcher.callRemoteMethods(null, "getSpecBackend",
         new Object[] { itemId, clientId }, new Class[] { Integer.class, String.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 getSpec() dispatcher exception:");
       e.printStackTrace();
@@ -358,7 +358,7 @@ public class AuctionServerFrontend implements API {
       RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "placeBidBackend",
         new Object[] { userId, auctionListingId, bid }, new Class[] { Integer.class, Integer.class, Float.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 placeBid() dispatcher exception:");
       e.printStackTrace();
@@ -377,7 +377,7 @@ public class AuctionServerFrontend implements API {
       RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "idMatchesExistingItemBackend",
         new Object[] { id }, new Class[] { Integer.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 idMatchesExistingItem() dispatcher exception:");
       e.printStackTrace();
@@ -397,7 +397,7 @@ public class AuctionServerFrontend implements API {
       RspList<Boolean> responses = this.dispatcher.callRemoteMethods(null, "isBidPriceAcceptableBackend",
         new Object[] { listingId, price }, new Class[] { Integer.class, Float.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 isBidPriceAcceptable() dispatcher exception:");
       e.printStackTrace();
@@ -416,7 +416,7 @@ public class AuctionServerFrontend implements API {
       RspList<String> responses = this.dispatcher.callRemoteMethods(null, "getAuctionedItemsBackend",
         new Object[] {}, new Class[] {},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 getAuctionedItems() dispatcher exception:");
       e.printStackTrace();
@@ -424,33 +424,20 @@ public class AuctionServerFrontend implements API {
     return null;
   }
 
+  /**
+   * Retrieve user by their unique ID
+   */
   private AuctionUser getUser(Integer userId) {
     try {
       RspList<AuctionUser> responses = this.dispatcher.callRemoteMethods(null, "getUserByInt",
         new Object[] { userId }, new Class[] { Integer.class },
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      return matchAllReplicaResponses(responses);
+      return GroupUtils.matchAllReplicaResponses(responses);
     } catch (Exception e) {
       System.err.println("🆘 getUser() dispatcher exception:");
       e.printStackTrace();
     }
     return null;
-  }
-
-  /*
-   * Check whether replicas return the same response
-   */
-  private <T> T matchAllReplicaResponses(RspList<T> responses) {
-    if (responses.isEmpty()) {
-      return null;
-    }
-    T firstResponse = responses.getFirst();
-    for (T response : responses.getResults()) {
-      if (!firstResponse.equals(response)) {
-        return null;
-      }
-    }
-    return firstResponse;
   }
 
   /*

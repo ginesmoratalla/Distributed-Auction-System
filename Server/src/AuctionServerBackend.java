@@ -389,7 +389,7 @@ public class AuctionServerBackend {
         new Object[] {},
         new Class[] {},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      Integer syncedCounter = matchAllReplicaResponses(counterState);
+      Integer syncedCounter = GroupUtils.matchAllReplicaResponses(counterState);
       if (syncedCounter == null) {
         globalId = 0;
       } else {
@@ -401,6 +401,10 @@ public class AuctionServerBackend {
     }
   }
 
+  /**
+   * Check (and synchronize with existing replicas, if needed)
+   * the state of the user list.
+   */
   private void syncUserListState() {
     System.out.println("📩 Backend replica state: synchronizing the user list...\n");
     try {
@@ -409,18 +413,22 @@ public class AuctionServerBackend {
         new Object[] {},
         new Class[] {},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-      HashMap<Integer, AuctionUser> syncedUserList = matchAllReplicaResponses(userListState);
+      HashMap<Integer, AuctionUser> syncedUserList = GroupUtils.matchAllReplicaResponses(userListState);
       if (syncedUserList == null) {
         this.userList = new HashMap<Integer, AuctionUser>();
       } else {
         this.userList = syncedUserList;
       }
     } catch (Exception e) {
-      System.err.println("🆘 Backend replica auction list syncrhonization error - dispatcher exception:");
+      System.err.println("🆘 Backend replica user list syncrhonization error - dispatcher exception:");
       e.printStackTrace();
     }
   }
 
+  /**
+   * Check (and synchronize with existing replicas, if needed)
+   * the state of the global auction list.
+   */
   private void syncAuctionListState() {
     System.out.println("📩 Backend replica state: synchronizing the auction list...\n");
     try {
@@ -430,7 +438,7 @@ public class AuctionServerBackend {
         new Class[] {},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
 
-      HashMap<String, HashMap<Integer, AuctionListing>> syncedAuctions = matchAllReplicaResponses(auctionListState);
+      HashMap<String, HashMap<Integer, AuctionListing>> syncedAuctions = GroupUtils.matchAllReplicaResponses(auctionListState);
       if (syncedAuctions == null) {
         this.auctionList = new HashMap<String, HashMap<Integer, AuctionListing>>();
       } else {
@@ -442,6 +450,10 @@ public class AuctionServerBackend {
     }
   }
 
+  /**
+   * Check (and synchronize with existing replicas, if needed)
+   * the state of the global double auction list.
+   */
   private void syncDoubleAuctionListState() {
     System.out.println("📩 Backend replica state: synchronizing the double auction list...\n");
     try {
@@ -450,36 +462,16 @@ public class AuctionServerBackend {
         new Object[] {},
         new Class[] {},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
-
-      HashMap<String, DoubleAuction> syncedDoubleAuctions = matchAllReplicaResponses(doubleAuctionState);
-      print("🆘🆘  SYNCED DOUBLE AUCTION LIST " + syncedDoubleAuctions);
-
+      HashMap<String, DoubleAuction> syncedDoubleAuctions = GroupUtils.matchAllReplicaResponses(doubleAuctionState);
       if (syncedDoubleAuctions == null) {
         this.doubleAuctionList = new HashMap<String, DoubleAuction>();
       } else {
         this.doubleAuctionList = syncedDoubleAuctions;
       }
     } catch (Exception e) {
-      System.err.println("🆘 Backend replica double auction list syncrhonization error - dispatcher exception:");
+      System.err.println("🆘 Backend replica (double auction list) syncrhonization error - dispatcher exception:");
       e.printStackTrace();
     }
   }
 
-  /**
-   * Check whether replicas return the same response
-   */
-  private <T> T matchAllReplicaResponses(RspList<T> responses) {
-    if (responses.isEmpty()) return null;
-    T firstResponse = responses.getFirst();
-    for (T response : responses.getResults()) {
-      if (!firstResponse.equals(response)) {
-        return null;
-      }
-    }
-    return firstResponse;
-  }
-
-  public void print(String print) {
-    System.out.println(print);
-  }
 }
