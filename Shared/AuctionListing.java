@@ -15,8 +15,7 @@ public class AuctionListing implements Serializable {
    *
    * Includes item, listing prices and logs
    */
-  public AuctionListing(AuctionItem item, Float startingPrice,
-                        Float reservePrice) {
+  public AuctionListing(AuctionItem item, Float startingPrice, Float reservePrice) {
 
     this.item = item;
     this.reservePrice = reservePrice;
@@ -64,4 +63,12 @@ public class AuctionListing implements Serializable {
   }
 
   public Float getReservePrice() { return reservePrice; }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    AuctionListing other = (AuctionListing) obj;
+    return item.getItemId().equals(other.item.getItemId());
+  }
 }

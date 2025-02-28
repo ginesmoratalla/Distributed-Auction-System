@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.util.Objects;
 
 public class AuctionItem implements Serializable {
 
@@ -62,5 +63,13 @@ public class AuctionItem implements Serializable {
 
   public String getItemCondition() {
     return this.itemCondition;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    AuctionItem other = (AuctionItem) obj;
+    return Objects.equals(itemId, other.itemId);
   }
 }

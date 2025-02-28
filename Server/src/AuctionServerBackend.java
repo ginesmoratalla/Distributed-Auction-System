@@ -450,7 +450,10 @@ public class AuctionServerBackend {
         new Object[] {},
         new Class[] {},
         new RequestOptions(ResponseMode.GET_ALL, this.DISPATCHER_TIMEOUT));
+
       HashMap<String, DoubleAuction> syncedDoubleAuctions = matchAllReplicaResponses(doubleAuctionState);
+      print("🆘🆘  SYNCED DOUBLE AUCTION LIST " + syncedDoubleAuctions);
+
       if (syncedDoubleAuctions == null) {
         this.doubleAuctionList = new HashMap<String, DoubleAuction>();
       } else {
@@ -466,9 +469,7 @@ public class AuctionServerBackend {
    * Check whether replicas return the same response
    */
   private <T> T matchAllReplicaResponses(RspList<T> responses) {
-    if (responses.isEmpty()) {
-      return null;
-    }
+    if (responses.isEmpty()) return null;
     T firstResponse = responses.getFirst();
     for (T response : responses.getResults()) {
       if (!firstResponse.equals(response)) {
@@ -478,5 +479,7 @@ public class AuctionServerBackend {
     return firstResponse;
   }
 
+  public void print(String print) {
+    System.out.println(print);
+  }
 }
-
