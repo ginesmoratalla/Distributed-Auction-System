@@ -27,6 +27,7 @@ public class AuctionListing implements Serializable {
     this.auctionOpen = true; // unused for the moment
   }
 
+  public AuctionListing() {}
   public String getAuctionLogs() { return this.auctionLogs; }
   public void appendAuctionLog(String newLog) { this.auctionLogs += newLog; }
   public Boolean isAcutionOpen() { return this.auctionOpen; }

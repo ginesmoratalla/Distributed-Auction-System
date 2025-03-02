@@ -20,6 +20,8 @@ public class AuctionUser implements Serializable {
     this.publicKey = publicKey;
   }
 
+  public AuctionUser() {}
+
   public Integer getUserId() { return this.userId; }
   public String getUserName() { return this.userName; }
   public void setUserName(String userName) { this.userName = userName; }

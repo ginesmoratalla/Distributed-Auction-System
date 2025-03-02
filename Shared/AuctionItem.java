@@ -23,6 +23,8 @@ public class AuctionItem implements Serializable {
     setItemCondition(conditionScale);
   }
 
+  public AuctionItem() {}
+
   public Integer getItemId() { return itemId; }
   public void setItemId(Integer itemId) { this.itemId = itemId; }
 
